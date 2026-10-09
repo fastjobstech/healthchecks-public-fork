@@ -1,0 +1,5 @@
+# Deploy/ops files from the fastjobstech fork; not part of the app image.
+.git
+k8s
+script
+export_secret.sh

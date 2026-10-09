@@ -1,0 +1,29 @@
+name: Build container image
+
+on:
+  push:
+    branches: ['master', 'staging']
+    paths-ignore:
+      - 'k8s/**'
+
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+  packages: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-image:
+    uses: fastjobstech/github-workflows/.github/workflows/build-image.yml@main
+    with:
+      app-name: ${{ github.event.repository.name }}
+      team: FASTJOBS
+      path-to-dockerfile: ./docker/Dockerfile
+      # The k8s overlays pin the image tag by hand (no image updater, and the Argo apps
+      # are not named <app>-qa/prod-argocd), so there is nothing to watch or announce.
+      skip-watch: true
+      skip-notification: true
