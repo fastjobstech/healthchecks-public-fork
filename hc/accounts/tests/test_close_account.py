@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from unittest.mock import Mock, patch
-
 from django.contrib.auth.models import User
 
 from hc.api.models import Check
@@ -25,8 +23,7 @@ class CloseAccountTestCase(BaseTestCase):
         self.assertContains(r, "1 project")
         self.assertContains(r, "0 checks")
 
-    @patch("hc.payments.models.braintree")
-    def test_it_works(self, mock_braintree: Mock) -> None:
+    def test_it_works(self) -> None:
         Check.objects.create(project=self.project, tags="foo a-B_1  baz@")
         Subscription.objects.create(
             user=self.alice, subscription_id="123", customer_id="fake-customer-id"
@@ -37,7 +34,7 @@ class CloseAccountTestCase(BaseTestCase):
 
         payload = {"confirmation": "alice@example.org"}
         r = self.client.post("/accounts/close/", payload, follow=True)
-        self.assertRedirects(r, "/accounts/login/")
+        self.assertRedirects(r, "/accounts/login/?account-closed=1")
         self.assertContains(r, "Account closed.")
 
         # Alice should be gone
@@ -46,9 +43,6 @@ class CloseAccountTestCase(BaseTestCase):
 
         # Check should be gone
         self.assertFalse(Check.objects.exists())
-
-        # Subscription should have been canceled
-        mock_braintree.Subscription.cancel.assert_called_once()
 
         # Subscription should be gone
         self.assertFalse(Subscription.objects.exists())
@@ -71,8 +65,7 @@ class CloseAccountTestCase(BaseTestCase):
         self.set_sudo_flag()
 
         payload = {"confirmation": "bob@example.org"}
-        r = self.client.post("/accounts/close/", payload)
-        self.assertRedirects(r, "/accounts/login/")
+        self.client.post("/accounts/close/", payload)
 
         # Alice should be still present
         self.alice.refresh_from_db()

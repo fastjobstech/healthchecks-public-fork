@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import random
 import uuid
 from datetime import date, datetime
@@ -18,10 +19,10 @@ from django.db.models import Q, QuerySet
 from django.db.models.functions import Lower
 from django.urls import reverse
 from django.utils.timezone import now
-
 from hc.lib import emails
 from hc.lib.date import month_boundaries, week_boundaries
 from hc.lib.signing import sign_bounce_id
+from hc.lib.urls import absolute_reverse
 
 if TYPE_CHECKING:
     # Importing Check at runtime would cause a circular import, so only import it
@@ -38,7 +39,12 @@ NAG_PERIODS = (
     (td(days=1), "Daily"),
 )
 
-REPORT_CHOICES = (("off", "Off"), ("weekly", "Weekly"), ("monthly", "Monthly"))
+REPORT_CHOICES = (
+    ("off", "Off"),
+    ("daily", "Daily"),
+    ("weekly", "Weekly"),
+    ("monthly", "Monthly"),
+)
 # How long an account can be over limits before it is scheduled for deletion
 OVER_LIMIT_GRACE = td(days=31)
 # When scheduling for deletion, how many days in the future to schedule
@@ -51,7 +57,7 @@ def month(dt: datetime) -> date:
 
 
 class ProfileManager(models.Manager["Profile"]):
-    def for_user(self, user: User) -> "Profile":
+    def for_user(self, user: User) -> Profile:
         try:
             return user.profile
         except Profile.DoesNotExist:
@@ -106,13 +112,12 @@ class Profile(models.Model):
         return f"Profile for {self.user.email}"
 
     def notifications_url(self) -> str:
-        return settings.SITE_ROOT + reverse("hc-notifications")
+        return absolute_reverse("hc-notifications")
 
     def reports_unsub_url(self) -> str:
         signer = TimestampSigner(salt="reports")
         signed_username = signer.sign(self.user.username)
-        path = reverse("hc-unsubscribe-reports", args=[signed_username])
-        return settings.SITE_ROOT + path
+        return absolute_reverse("hc-unsubscribe-reports", args=[signed_username])
 
     def prepare_token(self) -> str:
         token = token_urlsafe(24)
@@ -131,16 +136,17 @@ class Profile(models.Model):
         return "login" in self.token and check_password(token, self.token)
 
     def send_instant_login_link(
-        self, membership: "Member" | None = None, redirect_url: str | None = None
+        self, membership: Member | None = None, redirect_url: str | None = None
     ) -> None:
         token = self.prepare_token()
-        path = reverse("hc-check-token", args=[self.user.username, token])
-        if redirect_url:
-            path += "?next=%s" % redirect_url
+        query = {"next": redirect_url} if redirect_url else None
+        url = absolute_reverse(
+            "hc-check-token", args=[self.user.username, token], query=query
+        )
 
         ctx = {
-            "button_text": "Sign In",
-            "button_url": settings.SITE_ROOT + path,
+            "button_text": "Log In",
+            "button_url": url,
             "membership": membership,
         }
         emails.login(self.user.email, ctx)
@@ -152,23 +158,26 @@ class Profile(models.Model):
             "e": new_email,
         }
         signed_payload = TimestampSigner().sign_object(payload)
-        path = reverse("hc-change-email-verify", args=[signed_payload])
+        url = absolute_reverse("hc-change-email-verify", args=[signed_payload])
 
         ctx = {
-            "button_text": "Sign In",
-            "button_url": settings.SITE_ROOT + path,
+            "button_text": "Log In",
+            "button_url": url,
         }
         emails.login(new_email, ctx)
 
-    def send_transfer_request(self, project: "Project") -> None:
+    def send_transfer_request(self, project: Project) -> None:
         token = self.prepare_token()
         settings_path = reverse("hc-project-settings", args=[project.code])
-        path = reverse("hc-check-token", args=[self.user.username, token])
-        path += "?next=%s" % settings_path
+        url = absolute_reverse(
+            "hc-check-token",
+            args=[self.user.username, token],
+            query={"next": settings_path},
+        )
 
         ctx = {
             "button_text": "Project Settings",
-            "button_url": settings.SITE_ROOT + path,
+            "button_url": url,
             "project": project,
         }
         emails.transfer_request(self.user.email, ctx)
@@ -176,18 +185,18 @@ class Profile(models.Model):
     def send_sms_limit_notice(self, transport: str) -> None:
         ctx = {"transport": transport, "limit": self.sms_limit}
         if self.sms_limit != 500 and settings.USE_PAYMENTS:
-            ctx["url"] = settings.SITE_ROOT + reverse("hc-pricing")
+            ctx["url"] = absolute_reverse("hc-pricing")
 
         emails.sms_limit(self.user.email, ctx)
 
     def send_call_limit_notice(self) -> None:
         ctx: dict[str, Any] = {"limit": self.call_limit}
         if self.call_limit != 500 and settings.USE_PAYMENTS:
-            ctx["url"] = settings.SITE_ROOT + reverse("hc-pricing")
+            ctx["url"] = absolute_reverse("hc-pricing")
 
         emails.call_limit(self.user.email, ctx)
 
-    def projects(self) -> QuerySet["Project"]:
+    def projects(self) -> QuerySet[Project]:
         """Return a queryset of all projects we have access to."""
 
         is_owner = Q(owner_id=self.user_id)
@@ -214,18 +223,19 @@ class Profile(models.Model):
             return False
 
         # Sort checks by project. Need this because will group by project in template.
-        q = q.select_related("project").order_by("project_id")
+        # Sort primarily by project name, but projects can have duplicate names
+        # so sort by project id also.
+        q = q.select_related("project").order_by("project__name", "project_id")
         # list() executes the query, to avoid DB access while rendering the template.
         checks = list(q)
 
         unsub_url = self.reports_unsub_url()
         headers = {
-            "X-Bounce-ID": sign_bounce_id("r.%s" % self.user.username),
-            "List-Unsubscribe": "<%s>" % unsub_url,
+            "X-Bounce-ID": sign_bounce_id(f"r.{self.user.username}"),
+            "List-Unsubscribe": f"<{unsub_url}>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         }
         ctx: dict[str, Any] = {
-            "sort": self.sort,
             "unsub_link": unsub_url,
             "notifications_url": self.notifications_url(),
             "tz": self.tz,
@@ -244,7 +254,7 @@ class Profile(models.Model):
                 # downtimes_by_boundary returns records in descending order,
                 # but the template will need them in ascending order:
                 downtimes.reverse()
-                setattr(check, "past_downtimes", downtimes[:-1])
+                check.past_downtimes = downtimes[:-1]
 
             # boundaries are in descending order, but the template
             # will need them in ascending order:
@@ -320,8 +330,8 @@ class Profile(models.Model):
     def num_checks_available(self) -> int:
         return self.check_limit - self.num_checks_used()
 
-    def can_accept(self, project: "Project") -> bool:
-        return project.num_checks() <= self.num_checks_available()
+    def can_accept(self, project: Project) -> bool:
+        return project.check_set.count() <= self.num_checks_available()
 
     def update_next_nag_date(self) -> None:
         any_down = self.checks_from_all_projects().filter(status="down").exists()
@@ -351,6 +361,8 @@ class Profile(models.Model):
 
         while True:
             dt += td(days=1)
+            if self.reports == "daily":
+                return dt
             if self.reports == "monthly" and dt.day == 1:
                 return dt
             elif self.reports == "weekly" and dt.weekday() == 0:
@@ -368,6 +380,52 @@ class Profile(models.Model):
         self.save()
 
 
+class ProjectManager(models.Manager["Project"]):
+    def for_api_key(
+        self, api_key: str, accept_rw: bool, accept_ro: bool
+    ) -> Project | None:
+        """Look up project by API key.
+
+        This handles both the old plain text API keys, and the new hashed API keys.
+        For the hashed API keys, it looks up project by the first 8 characters of the
+        random part of the key, then calls Project.compare_api_key().
+        """
+
+        # Hashed keys
+        if accept_rw and api_key.startswith("hcw_"):
+            secret8 = api_key[4:12]
+            for project in Project.objects.filter(api_key__startswith=secret8):
+                if project.compare_api_key(api_key):
+                    return project
+
+        if accept_ro and api_key.startswith("hcr_"):
+            secret8 = api_key[4:12]
+            for project in Project.objects.filter(api_key_readonly__startswith=secret8):
+                if project.compare_api_key(api_key):
+                    return project
+
+        # Plain text keys
+        if accept_rw and accept_ro:
+            write_key_match = Q(api_key=api_key)
+            read_key_match = Q(api_key_readonly=api_key)
+            try:
+                return Project.objects.get(write_key_match | read_key_match)
+            except Project.DoesNotExist:
+                pass
+        elif accept_rw:
+            try:
+                return Project.objects.get(api_key=api_key)
+            except Project.DoesNotExist:
+                pass
+        elif accept_ro:
+            try:
+                return Project.objects.get(api_key_readonly=api_key)
+            except Project.DoesNotExist:
+                pass
+
+        return None
+
+
 class Project(models.Model):
     code = models.UUIDField(default=uuid.uuid4, unique=True)
     name = models.CharField(max_length=200, blank=True)
@@ -378,15 +436,14 @@ class Project(models.Model):
     ping_key = models.CharField(max_length=128, blank=True, null=True, unique=True)
     show_slugs = models.BooleanField(default=False)
 
+    objects = ProjectManager()
+
     def __str__(self) -> str:
         return self.name or self.owner.email
 
     @property
     def owner_profile(self) -> Profile:
         return Profile.objects.for_user(self.owner)
-
-    def num_checks(self) -> int:
-        return self.check_set.count()
 
     def num_checks_available(self) -> int:
         return self.owner_profile.num_checks_available()
@@ -411,8 +468,9 @@ class Project(models.Model):
         m = Member.objects.create(user=user, project=self, role=role)
         checks_url = reverse("hc-checks", args=[self.code])
 
-        profile = Profile.objects.for_user(user)
-        profile.send_instant_login_link(membership=m, redirect_url=checks_url)
+        if settings.EMAIL_HOST:
+            profile = Profile.objects.for_user(user)
+            profile.send_instant_login_link(membership=m, redirect_url=checks_url)
         return True
 
     def update_next_nag_dates(self) -> None:
@@ -445,7 +503,7 @@ class Project(models.Model):
         # It's a problem if any integration has a logged error
         return True if max(errors) else False
 
-    def transfer_request(self) -> "Member" | None:
+    def transfer_request(self) -> Member | None:
         return self.member_set.filter(transfer_request_date__isnull=False).first()
 
     def dashboard_url(self) -> str | None:
@@ -453,14 +511,73 @@ class Project(models.Model):
             return None
 
         frag = urlencode({self.api_key_readonly: str(self)}, quote_via=quote)
-        return reverse("hc-dashboard") + "#" + frag
+        return reverse("hc-dashboard", fragment=frag)
 
-    def checks_url(self, full: bool = True) -> str:
-        result = reverse("hc-checks", args=[self.code])
-        return settings.SITE_ROOT + result if full else result
+    def checks_url(self) -> str:
+        return absolute_reverse("hc-checks", args=[self.code])
+
+    def auth_metrics_url(self) -> str:
+        return absolute_reverse("hc-auth-metrics", args=[self.code])
 
     def get_absolute_url(self) -> str:
-        return self.checks_url(full=False)
+        return reverse("hc-checks", args=[self.code])
+
+    def _make_api_key(self, prefix: str) -> tuple[str, str]:
+        """Generate an API key with specified prefix, return (key, key_hash) tuple.
+
+        * `key` is what will be presented to the user,
+        * `key_hash` will be stored in the database.
+
+        `key_hash` consists of two parts:
+        * first 8 characters: the first 8 characters of plain text key
+          (for efficiently looking up project in the database by its API key)
+        * next 64 characters: HMAC(SECRET_KEY, key)
+        """
+        while True:
+            secret = token_urlsafe(21)
+            if "-" not in secret and "_" not in secret:
+                break
+
+        key = f"{prefix}{secret}"
+        digest = hmac.digest(settings.SECRET_KEY.encode(), key.encode(), "sha256")
+        return key, secret[:8] + "." + digest.hex()
+
+    def set_api_key(self) -> str:
+        key, key_hash = self._make_api_key("hcw_")
+        self.api_key = key_hash
+        return key
+
+    def set_api_key_readonly(self) -> str:
+        key, key_hash = self._make_api_key("hcr_")
+        self.api_key_readonly = key_hash
+        return key
+
+    def set_ping_key(self) -> str:
+        # The ping key will be:
+        # - 22 characters long, consisting of [a-z0-9]
+        # - no "_" or "-" characters for aesthetic reasons
+        # - no uppercase characters to avoid case-sensitivity issues
+        #   in email addresses.
+        # The ping key will have ~113 bits of entropy.
+        while True:
+            self.ping_key = token_urlsafe(16).lower()
+            if "_" not in self.ping_key and "-" not in self.ping_key:
+                break
+        return self.ping_key
+
+    def compare_api_key(self, key: str) -> bool:
+        if key.startswith("hcr_"):
+            expected = self.api_key_readonly
+        else:
+            expected = self.api_key
+
+        # Only calculate and compare digest if db key length is 8 + 64 = 72
+        if "." not in expected:
+            return False
+        _, key_hash = expected.split(".", maxsplit=1)
+
+        digest = hmac.digest(settings.SECRET_KEY.encode(), key.encode(), "sha256")
+        return hmac.compare_digest(digest.hex(), key_hash)
 
 
 class Member(models.Model):

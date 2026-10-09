@@ -3,15 +3,18 @@
 SITE_NAME supports exporting metrics and check statuses to
 [Prometheus](https://prometheus.io/), for use with [Grafana](https://grafana.com/).
 
-You can generate the metrics export endpoint by going to your project settings
-and **creating a read-only API key**. You will then see the link to
-the Prometheus endpoint:
+## Create read-only API key
 
-![Project's API Keys](IMG_URL/prometheus_endpoint.png)
+Create a read-only API key in <strong>Project Settings › API Access</strong>.
+
+Make sure to use a <strong>read-only</strong> API key. Prometheus does not need
+read-write API access.
+
+![Project's API Keys](IMG_URL/prometheus_api_keys.png)
 
 ## Update the prometheus.yml
 
-You can copy the Prometheus endpoint URL and add it to the Prometheus configuration:
+Add the following scrape configuration to Prometheus:
 
 ```yaml
   - job_name: "healthchecks"
@@ -22,7 +25,8 @@ You can copy the Prometheus endpoint URL and add it to the Prometheus configurat
       - targets: ["SITE_HOSTNAME"]
 ```
 
-Notice how we split up the URL and paste in the scheme, domain, and path separately.
+The "{your-project-uuid}" is the UUID you see in your browser's address bar
+when viewing a list of checks for a particular project.
 
 Reload Prometheus, and your changes should be live, coming in under the `hc_` prefix.
 
@@ -72,3 +76,14 @@ details pages in SITE_NAME. Construct the URLs like so:
 ```
 SITE_ROOT/cloaked/{unique_key}/
 ```
+
+## Working With Grafana Cloud
+
+Grafana Cloud requires the metrics endpoints to be authenticated using either
+HTTP "Basic" or "Bearer" authentication scheme. It refuses to scrape public endpoints.
+To fulfil this requirement, SITE_NAME provides an alternate metrics endpoint which
+requires "Bearer" authentication. Use the following settings with Grafana Cloud:
+
+* Scrape Job URL: `SITE_ROOT/projects/{your-project-uuid}/metrics/`
+* Authentication type: Bearer
+* Bearer token: the read-only API key

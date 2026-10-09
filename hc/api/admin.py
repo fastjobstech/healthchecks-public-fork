@@ -15,11 +15,14 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django_stubs_ext import WithAnnotations
-
 from hc.api.models import Channel, Check, Flip, Notification, Ping
 from hc.lib.date import format_duration
 
 Lookups = Iterable[tuple[str, str]]
+
+
+class CheckAnnotations(TypedDict):
+    owner_email: str
 
 
 @admin.register(Check)
@@ -28,7 +31,7 @@ class ChecksAdmin(ModelAdmin[Check]):
         css = {"all": ("css/admin/checks.css",)}
 
     search_fields = ["name", "code", "project__owner__email"]
-    readonly_fields = ("code",)
+    readonly_fields = ("code", "badge_key")
     raw_id_fields = ("project",)
     list_select_related = ("project",)
     list_display = (
@@ -44,17 +47,17 @@ class ChecksAdmin(ModelAdmin[Check]):
     )
     list_filter = ("status", "kind", "last_ping", "last_start")
 
-    actions = ["send_alert"]
-
     def get_queryset(self, request: HttpRequest) -> QuerySet[Check]:
         qs = super().get_queryset(request)
-        qs = qs.annotate(email=F("project__owner__email"))
+        qs = qs.annotate(owner_email=F("project__owner__email"))
         return qs
 
-    def project_(self, obj: Check) -> str:
-        url = obj.project.checks_url(full=False)
+    def project_(self, obj: WithAnnotations[Check, CheckAnnotations]) -> str:
+        url = obj.project.get_absolute_url()
         name = obj.project.name or "Default"
-        return format_html("""{} &rsaquo; <a href="{}">{}</a>""", obj.email, url, name)
+        return format_html(
+            """{} &rsaquo; <a href="{}">{}</a>""", obj.owner_email, url, name
+        )
 
     def name_tags(self, obj: Check) -> str:
         url = obj.details_url(full=False)
@@ -70,18 +73,12 @@ class ChecksAdmin(ModelAdmin[Check]):
     def timeout_schedule(self, obj: Check) -> str:
         if obj.kind == "simple":
             return format_duration(obj.timeout)
-        elif obj.kind == "cron":
+        elif obj.kind in ("cron", "oncalendar"):
+            if len(obj.schedule) > 30:
+                return obj.schedule[:30] + "..."
             return obj.schedule
         else:
             return "Unknown"
-
-    @admin.action(description="Send Alert")
-    def send_alert(self, request: HttpRequest, qs: QuerySet[Check]) -> None:
-        for check in qs:
-            for channel in check.channel_set.all():
-                channel.notify(check)
-
-        self.message_user(request, f"Alerts sent for {len(qs)} check(s)")
 
 
 class SchemeListFilter(admin.SimpleListFilter):
@@ -92,8 +89,8 @@ class SchemeListFilter(admin.SimpleListFilter):
         return (("http", "HTTP"), ("https", "HTTPS"), ("email", "Email"))
 
     def queryset(
-        self, request: HttpRequest, queryset: QuerySet[Check]
-    ) -> QuerySet[Check]:
+        self, request: HttpRequest, queryset: QuerySet[Ping]
+    ) -> QuerySet[Ping]:
         if self.value():
             queryset = queryset.filter(scheme=self.value())
         return queryset
@@ -165,6 +162,27 @@ class LastNotifyDurationFilter(admin.SimpleListFilter):
         return qs
 
 
+class LastErrorFilter(admin.SimpleListFilter):
+    title = "last error"
+
+    parameter_name = "status"
+
+    def lookups(self, r: HttpRequest, model_admin: ModelAdmin[Channel]) -> Lookups:
+        return (
+            ("ok", "No Error"),
+            ("error", "Error"),
+        )
+
+    def queryset(self, r: HttpRequest, qs: QuerySet[Channel]) -> QuerySet[Channel]:
+        v = self.value()
+        if v == "ok":
+            qs = qs.filter(last_error="")
+        elif v == "error":
+            qs = qs.exclude(last_error="")
+
+        return qs
+
+
 class ChannelAnnotations(TypedDict):
     project_code: UUID
     project_name: str
@@ -189,8 +207,9 @@ class ChannelsAdmin(ModelAdmin[Channel]):
         "status",
         "time",
     )
-    list_filter = ("kind", LastNotifyDurationFilter, "disabled")
+    list_filter = ("kind", LastNotifyDurationFilter, LastErrorFilter, "disabled")
     raw_id_fields = ("project", "checks")
+    actions = ["disable"]
 
     def created_(self, obj: Channel) -> date:
         return obj.created.date()
@@ -213,7 +232,8 @@ class ChannelsAdmin(ModelAdmin[Channel]):
         qs = qs.annotate(owner_email=F("project__owner__email"))
         return qs
 
-    def view_on_site(self, obj):
+    def view_on_site(self, obj: Channel) -> str:
+        assert hasattr(obj, "project_code")
         return reverse("hc-channels", args=[obj.project_code])
 
     def transport(self, obj: Channel) -> str:
@@ -243,6 +263,32 @@ class ChannelsAdmin(ModelAdmin[Channel]):
             return "OK"
         return "-"
 
+    def disable(self, request: HttpRequest, qs: QuerySet[Check]) -> None:
+        num_disabled = qs.update(disabled=True)
+        self.message_user(request, f"Disabled {num_disabled} channel(s)")
+
+
+class ErrorFilter(admin.SimpleListFilter):
+    title = "error"
+    parameter_name = "status"
+
+    def lookups(self, r: HttpRequest, model_admin: ModelAdmin[Notification]) -> Lookups:
+        return (
+            ("ok", "OK"),
+            ("error", "Error"),
+        )
+
+    def queryset(
+        self, r: HttpRequest, qs: QuerySet[Notification]
+    ) -> QuerySet[Notification]:
+        v = self.value()
+        if v == "ok":
+            qs = qs.filter(error="")
+        elif v == "error":
+            qs = qs.exclude(error="")
+
+        return qs
+
 
 @admin.register(Notification)
 class NotificationsAdmin(ModelAdmin[Notification]):
@@ -255,17 +301,14 @@ class NotificationsAdmin(ModelAdmin[Notification]):
     list_display = (
         "id",
         "created",
-        "channel_kind",
+        "channel__kind",
         "check_status",
         "project",
         "channel_value",
         "error",
     )
-    list_filter = ("created", "check_status", "channel__kind")
+    list_filter = ("channel__kind", "created", ErrorFilter)
     raw_id_fields = ("channel",)
-
-    def channel_kind(self, obj: Notification) -> str:
-        return obj.channel.kind
 
     def channel_value(self, obj: Notification) -> str:
         return format_html("<div>{}</div>", obj.channel.value)

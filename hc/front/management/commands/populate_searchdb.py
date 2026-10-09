@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import sqlite3
+from typing import Any
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
-
 from hc.front.views import _replace_placeholders
 from hc.lib.html import html2text
 
@@ -12,7 +12,7 @@ from hc.lib.html import html2text
 class Command(BaseCommand):
     help = "Renders Markdown to HTML"
 
-    def handle(self, *args, **options):
+    def handle(self, **options: Any) -> None:
         con = sqlite3.connect(settings.BASE_DIR / "search.db")
         cur = con.cursor()
         cur.execute("DROP TABLE IF EXISTS docs")
@@ -27,7 +27,7 @@ class Command(BaseCommand):
                 continue
 
             slug = doc_path.stem
-            print("Processing %s" % slug)
+            print(f"Processing {slug}")
 
             html = doc_path.open("r").read()
             html = _replace_placeholders(slug, html)

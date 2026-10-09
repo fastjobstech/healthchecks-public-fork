@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from datetime import timedelta as td
 from unittest.mock import Mock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from django.test import Client
 from django.test.utils import override_settings
 from django.utils.timezone import now
-
 from hc.api.models import Check, Flip, Ping
 from hc.test import BaseTestCase
 
@@ -24,6 +23,7 @@ class PingTestCase(BaseTestCase):
     def test_it_works(self) -> None:
         r = self.client.get(self.url)
         self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.text, "OK")
         self.assertEqual(r.headers["Access-Control-Allow-Origin"], "*")
         self.assertEqual(r.headers["Ping-Body-Limit"], "10000")
 
@@ -87,7 +87,7 @@ class PingTestCase(BaseTestCase):
     def test_it_handles_missing_check(self) -> None:
         r = self.client.get("/ping/07c2f548-9850-4b27-af5d-6c9dc157ec02/")
         self.assertEqual(r.status_code, 404)
-        self.assertEqual(r.content.decode(), "not found")
+        self.assertEqual(r.text, "not found")
 
     def test_it_handles_120_char_ua(self) -> None:
         ua = (
@@ -148,6 +148,17 @@ class PingTestCase(BaseTestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(ping.remote_addr, "1.1.1.1")
 
+    def test_it_handles_ipv4_mapped_ipv6_address(self) -> None:
+        ip = "::ffff:1.1.1.1"
+        r = self.client.get(
+            self.url,
+            HTTP_X_FORWARDED_FOR=ip,
+            REMOTE_ADDR="3.3.3.3",
+        )
+        ping = Ping.objects.get()
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(ping.remote_addr, "::ffff:1.1.1.1")
+
     def test_it_reads_forwarded_protocol(self) -> None:
         r = self.client.get(self.url, HTTP_X_FORWARDED_PROTO="https")
         ping = Ping.objects.get()
@@ -180,6 +191,7 @@ class PingTestCase(BaseTestCase):
         flip = Flip.objects.get()
         self.assertEqual(flip.owner, self.check)
         self.assertEqual(flip.new_status, "down")
+        self.assertEqual(flip.reason, "fail")
 
     def test_start_endpoint_works(self) -> None:
         last_ping = now() - td(hours=2)
@@ -215,6 +227,15 @@ class PingTestCase(BaseTestCase):
         self.check.refresh_from_db()
         self.assertTrue(self.check.last_start)
         self.assertEqual(self.check.last_start_rid, rid)
+
+    def test_it_accepts_uppercase_rid(self) -> None:
+        rid = "04603D8B-EDF4-4E85-8F61-24BEDBCAAB59"
+        r = self.client.get(self.url + f"/start?rid={rid}")
+        self.assertEqual(r.status_code, 200)
+
+        self.check.refresh_from_db()
+        self.assertTrue(self.check.last_start)
+        self.assertEqual(self.check.last_start_rid, UUID(rid))
 
     def test_it_sets_last_duration(self) -> None:
         self.check.last_start = now() - td(seconds=10)
@@ -408,3 +429,110 @@ class PingTestCase(BaseTestCase):
         for sample in samples:
             r = self.client.get(self.url + f"/start?rid={sample}")
             self.assertEqual(r.status_code, 400)
+
+    def test_it_handles_success_filter_match(self) -> None:
+        self.check.filter_http_body = True
+        self.check.success_kw = "SUCCESS"
+        self.check.save()
+
+        r = self.client.post(self.url, data="SUCCESS!", content_type="text/plain")
+        self.assertEqual(r.status_code, 200)
+
+        ping = Ping.objects.get()
+        self.assertEqual(ping.kind, None)
+
+    def test_it_handles_success_filter_miss(self) -> None:
+        self.check.filter_http_body = True
+        self.check.success_kw = "SUCCESS"
+        self.check.save()
+
+        r = self.client.post(self.url, data="hello world", content_type="text/plain")
+        self.assertEqual(r.status_code, 200)
+
+        ping = Ping.objects.get()
+        self.assertEqual(ping.kind, "ign")
+
+    def test_it_handles_failure_filter_match(self) -> None:
+        self.check.filter_http_body = True
+        self.check.failure_kw = "FAIL"
+        self.check.save()
+
+        r = self.client.post(self.url, data="FAIL!", content_type="text/plain")
+        self.assertEqual(r.status_code, 200)
+
+        ping = Ping.objects.get()
+        self.assertEqual(ping.kind, "fail")
+
+    def test_it_handles_failure_filter_miss(self) -> None:
+        self.check.filter_http_body = True
+        self.check.failure_kw = "FAIL"
+        self.check.save()
+
+        r = self.client.post(self.url, data="---", content_type="text/plain")
+        self.assertEqual(r.status_code, 200)
+
+        ping = Ping.objects.get()
+        self.assertEqual(ping.kind, "ign")
+
+    def test_it_handles_start_filter_match(self) -> None:
+        self.check.filter_http_body = True
+        self.check.start_kw = "START"
+        self.check.save()
+
+        r = self.client.post(self.url, data="STARTING", content_type="text/plain")
+        self.assertEqual(r.status_code, 200)
+
+        ping = Ping.objects.get()
+        self.assertEqual(ping.kind, "start")
+
+    def test_manual_resume_takes_precedence_over_keywords(self) -> None:
+        self.check.filter_http_body = True
+        self.check.success_kw = "SUCCESS"
+        self.check.manual_resume = True
+        self.check.status = "paused"
+        self.check.save()
+
+        r = self.client.post(self.url, data="SUCCESS!", content_type="text/plain")
+        self.assertEqual(r.status_code, 200)
+
+        ping = Ping.objects.get()
+        self.assertEqual(ping.kind, "ign")
+
+    def test_allowed_methods_takes_precedence_over_keywords(self) -> None:
+        self.check.filter_http_body = True
+        # This should normally trigger a failure
+        # (because filtering is enabled but no keywords match the empty body)
+        self.check.filter_default_fail = True
+        # But this should take precedence and result in "ign" anyway
+        self.check.methods = "POST"
+        self.check.save()
+
+        r = self.client.get(self.url)
+        self.assertEqual(r.status_code, 200)
+
+        ping = Ping.objects.get()
+        self.assertEqual(ping.kind, "ign")
+
+    def test_it_handles_filter_default_fail(self) -> None:
+        self.check.filter_http_body = True
+        self.check.success_kw = "SUCCESS"
+        self.check.filter_default_fail = True
+        self.check.save()
+
+        r = self.client.post(self.url, data="no keywords", content_type="text/plain")
+        self.assertEqual(r.status_code, 200)
+
+        ping = Ping.objects.get()
+        self.assertEqual(ping.kind, "fail")
+
+    def test_it_ignores_email_filters(self) -> None:
+        self.check.filter_subject = True
+        self.check.success_kw = "SUCCESS"
+        self.check.filter_default_fail = True
+        self.check.save()
+
+        r = self.client.get(self.url)
+        self.assertEqual(r.status_code, 200)
+
+        ping = Ping.objects.get()
+        self.assertEqual(ping.kind, None)

@@ -1,7 +1,7 @@
 # Server Configuration
 
 Healthchecks prepares its configuration in `hc/settings.py`. It reads configuration
-from environment variables. Below is a list of variables it reads and uses.
+from environment variables. Below is a list of environment variables it reads and uses.
 
 <ul class="self-hosted-configuration-toc">
 <li><a href="#ADMINS">ADMINS</a></li>
@@ -12,6 +12,7 @@ from environment variables. Below is a list of variables it reads and uses.
 <li><a href="#DB_HOST">DB_HOST</a></li>
 <li><a href="#DB_NAME">DB_NAME</a></li>
 <li><a href="#DB_PASSWORD">DB_PASSWORD</a></li>
+<li><a href="#DB_PASSWORD_FILE">DB_PASSWORD_FILE</a></li>
 <li><a href="#DB_PORT">DB_PORT</a></li>
 <li><a href="#DB_SSLMODE">DB_SSLMODE</a></li>
 <li><a href="#DB_TARGET_SESSION_ATTRS">DB_TARGET_SESSION_ATTRS</a></li>
@@ -20,8 +21,10 @@ from environment variables. Below is a list of variables it reads and uses.
 <li><a href="#DEFAULT_FROM_EMAIL">DEFAULT_FROM_EMAIL</a></li>
 <li><a href="#DISCORD_CLIENT_ID">DISCORD_CLIENT_ID</a></li>
 <li><a href="#DISCORD_CLIENT_SECRET">DISCORD_CLIENT_SECRET</a></li>
+<li><a href="#DISCORD_CLIENT_SECRET_FILE">DISCORD_CLIENT_SECRET_FILE</a></li>
 <li><a href="#EMAIL_HOST">EMAIL_HOST</a></li>
 <li><a href="#EMAIL_HOST_PASSWORD">EMAIL_HOST_PASSWORD</a></li>
+<li><a href="#EMAIL_HOST_PASSWORD_FILE">EMAIL_HOST_PASSWORD_FILE</a></li>
 <li><a href="#EMAIL_HOST_USER">EMAIL_HOST_USER</a></li>
 <li><a href="#EMAIL_PORT">EMAIL_PORT</a></li>
 <li><a href="#EMAIL_USE_TLS">EMAIL_USE_TLS</a></li>
@@ -29,14 +32,15 @@ from environment variables. Below is a list of variables it reads and uses.
 <li><a href="#EMAIL_USE_VERIFICATION">EMAIL_USE_VERIFICATION</a></li>
 <li><a href="#http_proxy">http_proxy and https_proxy</a></li>
 <li><a href="#INTEGRATIONS_ALLOW_PRIVATE_IPS">INTEGRATIONS_ALLOW_PRIVATE_IPS</a></li>
-<li><a href="#LINENOTIFY_CLIENT_ID">LINENOTIFY_CLIENT_ID</a></li>
-<li><a href="#LINENOTIFY_CLIENT_SECRET">LINENOTIFY_CLIENT_SECRET</a></li>
 <li><a href="#MASTER_BADGE_URL">MASTER_BADGE_LABEL</a></li>
 <li><a href="#MATRIX_ACCESS_TOKEN">MATRIX_ACCESS_TOKEN</a></li>
+<li><a href="#MATRIX_ACCESS_TOKEN_FILE">MATRIX_ACCESS_TOKEN_FILE</a></li>
 <li><a href="#MATRIX_HOMESERVER">MATRIX_HOMESERVER</a></li>
 <li><a href="#MATRIX_USER_ID">MATRIX_USER_ID</a></li>
 <li><a href="#MATTERMOST_ENABLED">MATTERMOST_ENABLED</a></li>
 <li><a href="#MSTEAMS_ENABLED">MSTEAMS_ENABLED</a></li>
+<li><a href="#NTFY_SH_TOKEN">NTFY_SH_TOKEN</a></li>
+<li><a href="#NTFY_SH_TOKEN_FILE">NTFY_SH_TOKEN_FILE</a></li>
 <li><a href="#OPSGENIE_ENABLED">OPSGENIE_ENABLED</a></li>
 <li><a href="#PAGERTREE_ENABLED">PAGERTREE_ENABLED</a></li>
 <li><a href="#PD_APP_ID">PD_APP_ID</a></li>
@@ -47,7 +51,9 @@ from environment variables. Below is a list of variables it reads and uses.
 <li><a href="#PROMETHEUS_ENABLED">PROMETHEUS_ENABLED</a></li>
 <li><a href="#PUSHBULLET_CLIENT_ID">PUSHBULLET_CLIENT_ID</a></li>
 <li><a href="#PUSHBULLET_CLIENT_SECRET">PUSHBULLET_CLIENT_SECRET</a></li>
+<li><a href="#PUSHBULLET_CLIENT_SECRET_FILE">PUSHBULLET_CLIENT_SECRET_FILE</a></li>
 <li><a href="#PUSHOVER_API_TOKEN">PUSHOVER_API_TOKEN</a></li>
+<li><a href="#PUSHOVER_API_TOKEN_FILE">PUSHOVER_API_TOKEN_FILE</a></li>
 <li><a href="#PUSHOVER_EMERGENCY_EXPIRATION">PUSHOVER_EMERGENCY_EXPIRATION</a></li>
 <li><a href="#PUSHOVER_EMERGENCY_RETRY_DELAY">PUSHOVER_EMERGENCY_RETRY_DELAY</a></li>
 <li><a href="#PUSHOVER_SUBSCRIPTION_URL">PUSHOVER_SUBSCRIPTION_URL</a></li>
@@ -60,8 +66,12 @@ from environment variables. Below is a list of variables it reads and uses.
 <li><a href="#S3_ENDPOINT">S3_ENDPOINT</a></li>
 <li><a href="#S3_REGION">S3_REGION</a></li>
 <li><a href="#S3_SECRET_KEY">S3_SECRET_KEY</a></li>
+<li><a href="#S3_SECRET_KEY_FILE">S3_SECRET_KEY_FILE</a></li>
 <li><a href="#S3_TIMEOUT">S3_TIMEOUT</a></li>
+<li><a href="#S3_SECURE">S3_SECURE</a></li>
 <li><a href="#SECRET_KEY">SECRET_KEY</a></li>
+<li><a href="#SECRET_KEY_FILE">SECRET_KEY_FILE</a></li>
+<li><a href="#SECURE_PROXY_SSL_HEADER">SECURE_PROXY_SSL_HEADER</a></li>
 <li><a href="#SHELL_ENABLED">SHELL_ENABLED</a></li>
 <li><a href="#SIGNAL_CLI_SOCKET">SIGNAL_CLI_SOCKET</a></li>
 <li><a href="#SITE_LOGO_URL">SITE_LOGO_URL</a></li>
@@ -69,19 +79,25 @@ from environment variables. Below is a list of variables it reads and uses.
 <li><a href="#SITE_ROOT">SITE_ROOT</a></li>
 <li><a href="#SLACK_CLIENT_ID">SLACK_CLIENT_ID</a></li>
 <li><a href="#SLACK_CLIENT_SECRET">SLACK_CLIENT_SECRET</a></li>
+<li><a href="#SLACK_CLIENT_SECRET_FILE">SLACK_CLIENT_SECRET_FILE</a></li>
 <li><a href="#SLACK_ENABLED">SLACK_ENABLED</a></li>
 <li><a href="#SPIKE_ENABLED">SPIKE_ENABLED</a></li>
 <li><a href="#TELEGRAM_BOT_NAME">TELEGRAM_BOT_NAME</a></li>
 <li><a href="#TELEGRAM_TOKEN">TELEGRAM_TOKEN</a></li>
+<li><a href="#TELEGRAM_TOKEN_FILE">TELEGRAM_TOKEN_FILE</a></li>
 <li><a href="#TRELLO_APP_KEY">TRELLO_APP_KEY</a></li>
+<li><a href="#TRELLO_APP_KEY_FILE">TRELLO_APP_KEY_FILE</a></li>
 <li><a href="#TWILIO_ACCOUNT">TWILIO_ACCOUNT</a></li>
 <li><a href="#TWILIO_AUTH">TWILIO_AUTH</a></li>
+<li><a href="#TWILIO_AUTH_FILE">TWILIO_AUTH_FILE</a></li>
 <li><a href="#TWILIO_FROM">TWILIO_FROM</a></li>
 <li><a href="#TWILIO_MESSAGING_SERVICE_SID">TWILIO_MESSAGING_SERVICE_SID</a></li>
 <li><a href="#TWILIO_USE_WHATSAPP">TWILIO_USE_WHATSAPP</a></li>
 <li><a href="#USE_PAYMENTS">USE_PAYMENTS</a></li>
 <li><a href="#VICTOROPS_ENABLED">VICTOROPS_ENABLED</a></li>
 <li><a href="#WEBHOOKS_ENABLED">WEBHOOKS_ENABLED</a></li>
+<li><a href="#WHATSAPP_DOWN_CONTENT_SID">WHATSAPP_DOWN_CONTENT_SID</a></li>
+<li><a href="#WHATSAPP_UP_CONTENT_SID">WHATSAPP_UP_CONTENT_SID</a></li>
 <li><a href="#ZULIP_ENABLED">ZULIP_ENABLED</a></li>
 </ul>
 
@@ -89,7 +105,7 @@ from environment variables. Below is a list of variables it reads and uses.
 
 Default: `""` (empty string)
 
-A comma-sepparated list of email addresses to send code error notifications to.
+A comma-separated list of email addresses to send code error notifications to.
 When `DEBUG=False`, Healthchecks will send the details of exceptions raised in the
 request/response cycle to the listed addresses. Example:
 
@@ -102,18 +118,22 @@ SMTP credentials in the `EMAIL_...` environment variables.
 
 ## `ALLOWED_HOSTS` {: #ALLOWED_HOSTS }
 
-Default: `*`
+Default: the domain part of `SITE_ROOT`
 
-The host/domain names that this site can serve. You can specify multiple domain names
-by separating them with commas:
+The host/domain names that this site can serve. Healthchecks populates this setting
+automatically with the domain part of [SITE_ROOT](#SITE_ROOT). You do not need
+to set it unless you serve Healthchecks on more than one domain.
+
+If you do serve the same Healthchecks instance on more than one domain, specify
+them all in `ALLOWED_HOSTS`, separated by commas:
 
 ```ini
-ALLOWED_HOSTS=my-hc.example.org,alternative-name.example.org
+ALLOWED_HOSTS=first.example.org,second.example.org
 ```
 
-Apart from the comma-separated syntax, this is a standard Django setting.
+Aside from the comma-separated syntax, this is a standard Django setting.
 Read more about it in the
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#allowed-hosts).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#allowed-hosts).
 
 ## `APPRISE_ENABLED` {: #APPRISE_ENABLED }
 
@@ -139,35 +159,44 @@ The database engine to use. Possible values: `sqlite`, `postgres`, `mysql`.
 Default: `0`
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#conn-max-age).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#conn-max-age).
 
 ## `DB_HOST` {: #DB_HOST }
 
 Default: `""` (empty string)
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#host).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#host).
 
 ## `DB_NAME` {: #DB_NAME }
 
 Default: `hc` (PostgreSQL, MySQL) or `/path/to/projectdir/hc.sqlite` (SQLite)
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#name).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#name).
 
 ## `DB_PASSWORD` {: #DB_PASSWORD }
 
 Default: `""` (empty string)
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#password).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#password).
+
+## `DB_PASSWORD_FILE` {: #DB_PASSWORD_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the [DB_PASSWORD](#DB_PASSWORD) setting.
+If `DB_PASSWORD` and `DB_PASSWORD_FILE` are both set, `DB_PASSWORD_FILE` takes
+precedence.
 
 ## `DB_PORT` {: #DB_PORT }
 
 Default: `""` (empty string)
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#port).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#port).
 
 ## `DB_SSLMODE` {: #DB_SSLMODE }
 
@@ -186,7 +215,7 @@ PostgreSQL-specific, [details](https://www.postgresql.org/docs/10/libpq-connect.
 Default: `postgres` (PostgreSQL) or `root` (MySQL)
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#user).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#user).
 
 ## `DEBUG` {: #DEBUG }
 
@@ -197,14 +226,14 @@ A boolean that turns on/off debug mode.
 _Never run a Healthchecks instance in production with the debug mode turned on!_
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#debug).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#debug).
 
 ## `DEFAULT_FROM_EMAIL` {: #DEFAULT_FROM_EMAIL }
 
 Default: `healthchecks@example.org`
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#default-from-email).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#default-from-email).
 
 ## `DISCORD_CLIENT_ID` {: #DISCORD_CLIENT_ID }
 
@@ -231,47 +260,65 @@ Default: `None`
 The Discord Client Secret, required by the Discord integration. Look it up at
 [https://discordapp.com/developers/applications/me](https://discordapp.com/developers/applications/me).
 
+## `DISCORD_CLIENT_SECRET_FILE` {: #DISCORD_CLIENT_SECRET_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the [DISCORD_CLIENT_SECRET](#DISCORD_CLIENT_SECRET)
+setting. If `DISCORD_CLIENT_SECRET` and `DISCORD_CLIENT_SECRET_FILE` are both set,
+`DISCORD_CLIENT_SECRET_FILE` takes precedence.
+
 ## `EMAIL_HOST` {: #EMAIL_HOST }
 
 Default: `""` (empty string)
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#email-host).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#email-host).
 
 ## `EMAIL_HOST_PASSWORD` {: #EMAIL_HOST_PASSWORD }
 
 Default: `""` (empty string)
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#email-host-password).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#email-host-password).
+
+## `EMAIL_HOST_PASSWORD_FILE` {: #EMAIL_HOST_PASSWORD_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the [EMAIL_HOST_PASSWORD](#EMAIL_HOST_PASSWORD)
+setting. If `EMAIL_HOST_PASSWORD` and `EMAIL_HOST_PASSWORD_FILE`
+are both set, `EMAIL_HOST_PASSWORD_FILE` takes precedence.
 
 ## `EMAIL_HOST_USER` {: #EMAIL_HOST_USER }
 
 Default: `""` (empty string)
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#email-host-user).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#email-host-user).
 
 ## `EMAIL_PORT` {: #EMAIL_PORT }
 
 Default: `587`
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#email-port).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#email-port).
 
 ## `EMAIL_USE_TLS` {: #EMAIL_USE_TLS }
 
 Default: `True`
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#email-use-tls).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#email-use-tls).
 
 ## `EMAIL_USE_SSL` {: #EMAIL_USE_SSL}
 
 Default: `False`
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#email-use-ssl).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#email-use-ssl).
 
 ## `EMAIL_USE_VERIFICATION` {: #EMAIL_USE_VERIFICATION }
 
@@ -331,14 +378,6 @@ This setting also affects connections to the proxy server when the `http_proxy` 
 `https_proxy` environment variables are set. If your proxy server has a private
 IP address, you will need to enable `INTEGRATIONS_ALLOW_PRIVATE_IPS` to use it.
 
-## `LINENOTIFY_CLIENT_ID` {: #LINENOTIFY_CLIENT_ID }
-
-Default: `None`
-
-## `LINENOTIFY_CLIENT_SECRET` {: #LINENOTIFY_CLIENT_SECRET }
-
-Default: `None`
-
 ## `MASTER_BADGE_LABEL` {: #MASTER_BADGE_URL }
 
 Default: same as `SITE_NAME`
@@ -366,6 +405,15 @@ MATRIX_HOMESERVER=https://matrix.org
 MATRIX_USER_ID=@mychecks:matrix.org
 ```
 
+## `MATRIX_ACCESS_TOKEN_FILE` {: #MATRIX_ACCESS_TOKEN_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the [MATRIX_ACCESS_TOKEN](#MATRIX_ACCESS_TOKEN)
+setting. If `MATRIX_ACCESS_TOKEN` and `MATRIX_ACCESS_TOKEN_FILE` are both set,
+`MATRIX_ACCESS_TOKEN_FILE` takes precedence.
+
 ## `MATRIX_HOMESERVER` {: #MATRIX_HOMESERVER }
 
 Default: `None`
@@ -388,7 +436,30 @@ A boolean that turns on/off the Mattermost integration. Enabled by default.
 
 Default: `True`
 
-A boolean that turns on/off the MS Teams integration. Enabled by default.
+A boolean that turns on/off the MS Teams integration. Enabled
+
+## `NTFY_SH_TOKEN` {: #NTFY_SH_TOKEN }
+
+Default: `None`
+
+The default access token to use when sending ntfy notifications to the hosted ntfy.sh
+server. This token will be only used when sending to the ntfy server at
+`https://ntfy.sh` and when the user has not specified their own access token
+when setting up the ntfy integration.
+
+Use this setting if your Healthchecks instance is hitting ntfy.sh free plan's
+[daily sending limit](https://docs.ntfy.sh/publish/#limitations) and you want to ensure
+reliable notification delivery for ntfy integrations that do not bring their own
+access token.
+
+## `NTFY_SH_TOKEN_FILE` {: #NTFY_SH_TOKEN_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the [NTFY_SH_TOKEN](#NTFY_SH_TOKEN) setting.
+If `NTFY_SH_TOKEN` and `NTFY_SH_TOKEN_FILE` are both set, `NTFY_SH_TOKEN_FILE` takes
+precedence.
 
 ## `OPSGENIE_ENABLED` {: #OPSGENIE_ENABLED }
 
@@ -440,24 +511,52 @@ Default: `localhost`
 The domain to use for generating ping email addresses. Example:
 
 ```ini
-PING_EMAIL_DOMAIN=ping.my-hc.example.org
+PING_EMAIL_DOMAIN=hc.example.org
 ```
 
 In this example, Healthchecks would generate ping email addresses similar
-to `3f1a7317-8e96-437c-a17d-b0d550b51e86@ping.my-hc.example.org`.
+to `3f1a7317-8e96-437c-a17d-b0d550b51e86@hc.example.org`.
+
+This setting only controls how the ping email addresses are constructed, and
+does not by itself enable the ping-by-sending-email functionality. To receive
+emails, you will also need:
+
+* A DNS record pointing `hc.example.org` to your Healthchecks
+  instance's IP address.
+* `manage.py smtpd` (Healthchecks' SMTP listener service) running, listening
+  on port 25, and reachable from the outside world. If you are using the
+  [official Docker image](https://hub.docker.com/r/healthchecks/healthchecks),
+  see [the instructions here](../self_hosted_docker/#SMTPD_PORT) for enabling the SMTP
+  listener service.
 
 ## `PING_ENDPOINT` {: #PING_ENDPOINT }
 
 Default: `SITE_ROOT` + `/ping/`
 
-The base URL to use for generating ping URLs. Example:
+The base URL to use for constructing ping URLs for display. Healthchecks constructs ping
+URLs by appending either an UUID value or `<ping-key>/<slug>` value to `PING_ENDPOINT`.
+
+Notes:
+
+* Make sure the `PING_ENDPOINT` value ends with a trailing slash. If a trailing slash
+  is missing, Healthchecks will *not* add it implicitly.
+* Healthchecks uses `PING_ENDPOINT` for formatting ping URLs for display.
+  The `PING_ENDPOINT` value does not influence the routing of incoming HTTP requests.
+  If you change the `PING_ENDPOINT` value, you will likely also need to add matching
+  URL rewriting rules in your reverse proxy configuration.
+
+Example:
 
 ```ini
-PING_ENDPOINT=https://ping.my-hc.example.org
+PING_ENDPOINT=https://ping.my-hc.example.org/
 ```
 
-In this example, Healthchecks would generate ping URLs similar
-to `https://ping.my-hc.example.org/3f1a7317-8e96-437c-a17d-b0d550b51e86`.
+With this setting, Healthchecks will generate ping URLs similar to:
+
+```
+https://ping.my-hc.example.org/3f1a7317-8e96-437c-a17d-b0d550b51e86
+https://ping.my-hc.example.org/1fj9XWM6Ns8vLGTmnPGk9g/dummy-slug
+```
 
 ## `PROMETHEUS_ENABLED` {: #PROMETHEUS_ENABLED }
 
@@ -493,6 +592,16 @@ Default: `None`
 The Pushbullet Client Secret, required by the Pushbullet integration. Look it up at
 [https://www.pushbullet.com/#settings/clients](https://www.pushbullet.com/#settings/clients).
 
+## `PUSHBULLET_CLIENT_SECRET_FILE` {: #PUSHBULLET_CLIENT_SECRET_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the
+[PUSHBULLET_CLIENT_SECRET](#PUSHBULLET_CLIENT_SECRET) setting. If
+`PUSHBULLET_CLIENT_SECRET` and `PUSHBULLET_CLIENT_SECRET_FILE` are both set,
+`PUSHBULLET_CLIENT_SECRET_FILE` takes precedence.
+
 ## `PUSHOVER_API_TOKEN` {: #PUSHOVER_API_TOKEN }
 
 Default: `None`
@@ -511,6 +620,15 @@ To enable the Pushover integration:
   `PUSHOVER_API_TOKEN` and `PUSHOVER_SUBSCRIPTION_URL` environment
   variables. The Pushover subscription URL should look similar to
   `https://pushover.net/subscribe/yourAppName-randomAlphaNumericData`.
+
+## `PUSHOVER_API_TOKEN_FILE` {: #PUSHOVER_API_TOKEN_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the [PUSHOVER_API_TOKEN](#PUSHOVER_API_TOKEN)
+setting. If `PUSHOVER_API_TOKEN` and `PUSHOVER_API_TOKEN_FILE` are both set,
+`PUSHOVER_API_TOKEN_FILE` takes precedence.
 
 ## `PUSHOVER_EMERGENCY_EXPIRATION` {: #PUSHOVER_EMERGENCY_EXPIRATION }
 
@@ -566,16 +684,30 @@ When `REMOTE_USER_HEADER` is set, Healthchecks will:
  - automatically create a user account if it does not exist
  - disable the default authentication methods (login link to email, password)
 
- The header name in `REMOTE_USER_HEADER` must be specified in upper-case,
- with any dashes replaced with underscores, and prefixed with `HTTP_`. For
- example, if your authentication proxy sets a `X-Authenticated-User` request
- header, you should set `REMOTE_USER_HEADER=HTTP_X_AUTHENTICATED_USER`.
+The header name in `REMOTE_USER_HEADER` must be specified in upper-case,
+with any dashes replaced with underscores, and prefixed with `HTTP_`. For
+example, if your authentication proxy sets a `X-Authenticated-User` request
+header, you should set `REMOTE_USER_HEADER=HTTP_X_AUTHENTICATED_USER`.
 
 **Important:** When this option is enabled, **Healthchecks will trust the header's
 value implicitly**, so it is **very important** to ensure that attackers cannot
 set the value themselves (and thus impersonate any user). How to do this varies by
 your chosen proxy, but generally involves configuring it to strip out headers that
 normalize to the same name as the chosen identity header.
+
+**On using `local_settings.py`:**
+When Healthchecks reads settings from environment variables and encounters
+the `REMOTE_USER_HEADER` environment variable, it sets *two* settings,
+`REMOTE_USER_HEADER` and `AUTHENTICATION_BACKENDS`. This logic has already run by the
+time Healthchecks reads `local_settings.py`. Therefore, if you configure Healthchecks
+using the `local_settings.py` file instead of environment variables, and specify
+`REMOTE_USER_HEADER` there, you will also need a line which sets the other setting,
+`AUTHENTICATION_BACKENDS`:
+
+```
+REMOTE_USER_HEADER = "HTTP_X_AUTHENTICATED_USER"
+AUTHENTICATION_BACKENDS = ["hc.accounts.backends.CustomHeaderBackend"]
+```
 
 ## `ROCKETCHAT_ENABLED` {: #ROCKETCHAT_ENABLED }
 
@@ -639,11 +771,27 @@ Default: `None`
 
 The secret key of an account in S3 service.
 
+## `S3_SECRET_KEY_FILE` {: #S3_SECRET_KEY_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the [S3_SECRET_KEY](#S3_SECRET_KEY) setting.
+If `S3_SECRET_KEY` and `S3_SECRET_KEY_FILE` are both set, `S3_SECRET_KEY_FILE` takes
+precedence.
+
 ## `S3_TIMEOUT` {: #S3_TIMEOUT }
 
 Default: `60`
 
 Timeout for individual S3 operations, in seconds.
+
+## `S3_SECURE` {: #S3_SECURE }
+
+Default: `True`
+
+Whether to use secure (TLS) connection to S3 or not. To
+use unencrypted HTTP requests, set this value to `False`.
 
 ## `SECRET_KEY` {: #SECRET_KEY }
 
@@ -653,7 +801,53 @@ A secret key used for cryptographic signing. Should be set to a unique,
 unpredictable value.
 
 This is a standard Django setting, read more in
-[Django documentation](https://docs.djangoproject.com/en/4.2/ref/settings/#secret-key).
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#secret-key).
+
+## `SECRET_KEY_FILE` {: #SECRET_KEY_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the [SECRET_KEY](#SECRET_KEY) setting.
+If `SECRET_KEY` and `SECRET_KEY_FILE` are both set, `SECRET_KEY_FILE` takes
+precedence.
+
+## `SECURE_PROXY_SSL_HEADER` {: #SECURE_PROXY_SSL_HEADER }
+
+Default: `None`
+
+Comma-separated HTTP header name and value that signifies a request is secure
+(made over https://). This information is important for CSRF protection.
+
+If Healthchecks is running behind a proxy, the proxy may be "swallowing" whether the original
+request uses HTTPS or not. In this case, you may see HTTP 403 errors when submitting
+forms (for example, trying to log in).
+
+If set, the value should contain the name of the header to look for and the required
+value, separated with comma. The header name must be specified in upper-case,
+with any dashes replaced with underscores, and prefixed with `HTTP_`. Example:
+
+```ini
+# environment variable
+SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https
+```
+
+You should *only* set this environment variable if you control your proxy or have some
+other guarantee that it sets/strips this header appropriately.
+
+**Note on using `local_settings.py`:**
+When Healthchecks reads settings from environment variables, it expects
+`SECURE_PROXY_SSL_HEADER` to contain header name and value, separated with comma.
+If you set `SECURE_PROXY_SSL_HEADER` in `local_settings.py`, it should be a tuple
+with two elements instead:
+
+```ini
+# in local_settings.py
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+```
+
+This environment variable maps to a standard Django setting, read more in
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#secure-proxy-ssl-header).
 
 ## `SHELL_ENABLED` {: #SHELL_ENABLED }
 
@@ -689,7 +883,7 @@ SIGNAL_CLI_SOCKET=example.org:7583
 ```
 
 Healthchecks uses [signal-cli](https://github.com/AsamK/signal-cli) to send Signal
-notifications. Healthcecks interacts with signal-cli over UNIX or TCP socket (requires
+notifications. Healthchecks interacts with signal-cli over UNIX or TCP socket (requires
 signal-cli 0.10.0 or later).
 
 To enable the Signal integration:
@@ -754,19 +948,43 @@ its web UI and documentation.
 Default: `http://localhost:8000`
 
 The base URL of this Healthchecks instance. Healthchecks uses `SITE_ROOT` whenever
-it needs to construct absolute URLs.
+it needs to construct absolute URLs. Healthchecks also uses `SITE_ROOT` to set
+several other settings, detailed below.
+
+If the [ALLOWED_HOSTS](#ALLOWED_HOSTS) setting is not set, Healthchecks
+automatically populates it with the domain part of `SITE_ROOT`. Under typical scenarios
+you can use the automatically populated value and do not need to set
+`ALLOWED_HOSTS` yourself.
+
+If the SITE_ROOT contains a path (for example, <code>http://localhost:8000<b>/prefix</b></code>),
+then Healthchecks automatically sets the following additional Django settings:
+
+* <code>LOGIN_URL=<b>/prefix</b>/accounts/login/</code>. Required
+for correct redirection to a log-in page when an unauthenticated user requests a
+page that requires authentication. `LOGIN_URL` is a standard Django setting, read more
+about it in
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#login-url).
+* <code>STATIC_URL=<b>/prefix</b>/static/</code>. Required for correct
+URL generation to static files (JS, CSS, images). `STATIC_URL` is a standard Django
+setting, read more about it in
+[Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#static-url).
+
+**On using `local_settings.py`:** Healthchecks only sets the above additional settings
+if you specify `SITE_ROOT` via an environment variable. If you instead specify it in
+`local_settings.py`, you will also need to set `ALLOWED_HOSTS`, `LOGIN_URL`, and
+`STATIC_URL` there.
 
 ## `SLACK_CLIENT_ID` {: #SLACK_CLIENT_ID }
 
 Default: `None`
 
-The Slack Client ID, used by the Slack integration.
+The Slack Client ID, used by the Healthchecks integration for Slack.
 
-The Slack integration can work with or without the Slack Client ID. If
+The integration can work with or without the Slack Client ID. If
 the Slack Client ID is not set, in the "Integrations - Add Slack" page,
 Healthchecks will ask the user to provide a webhook URL for posting notifications.
 
-If the Slack Client _is_ set, Healthchecks will use the OAuth2 flow
+If the Slack Client ID _is_ set, Healthchecks will use the OAuth2 flow
 to get the webhook URL from Slack. The OAuth2 flow is more user-friendly.
 To set it up, go to [https://api.slack.com/apps/](https://api.slack.com/apps/)
 and create a _Slack app_. When setting up the Slack app, make sure to:
@@ -784,11 +1002,20 @@ Default: `None`
 The Slack Client Secret. Required if `SLACK_CLIENT_ID` is set.
 Look it up at [https://api.slack.com/apps/](https://api.slack.com/apps/).
 
+## `SLACK_CLIENT_SECRET_FILE` {: #SLACK_CLIENT_SECRET_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the [SLACK_CLIENT_SECRET](#SLACK_CLIENT_SECRET)
+setting. If `SLACK_CLIENT_SECRET` and `SLACK_CLIENT_SECRET_FILE` are both set,
+`SLACK_CLIENT_SECRET_FILE` takes precedence.
+
 ## `SLACK_ENABLED` {: #SLACK_ENABLED }
 
 Default: `True`
 
-A boolean that turns on/off the Slack integration. Enabled by default.
+A boolean that turns on/off the Healthchecks integration for Slack. Enabled by default.
 
 ## `SPIKE_ENABLED` {: #SPIKE_ENABLED }
 
@@ -827,6 +1054,15 @@ Default: `None`
 
 The Telegram bot user's authentication token, required by the Telegram integration.
 
+## `TELEGRAM_TOKEN_FILE` {: #TELEGRAM_TOKEN_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the [TELEGRAM_TOKEN](#TELEGRAM_TOKEN) setting.
+If `TELEGRAM_TOKEN` and `TELEGRAM_TOKEN_FILE` are both set, `TELEGRAM_TOKEN_FILE` takes
+precedence.
+
 ## `TRELLO_APP_KEY` {: #TRELLO_APP_KEY }
 
 Default: `None`
@@ -836,6 +1072,15 @@ The [Trello](https://trello.com/) app key, required by the Trello integration.
 To set up the Trello integration, get a developer API key from
 [https://trello.com/app-key](https://trello.com/app-key) and put it in the
 `TRELLO_APP_KEY` environment variable.
+
+## `TRELLO_APP_KEY_FILE` {: #TRELLO_APP_KEY_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the [TRELLO_APP_KEY](#TRELLO_APP_KEY) setting.
+If `TRELLO_APP_KEY` and `TRELLO_APP_KEY_FILE` are both set, `TRELLO_APP_KEY_FILE` takes
+precedence.
 
 ## `TWILIO_ACCOUNT` {: #TWILIO_ACCOUNT }
 
@@ -848,6 +1093,15 @@ Twilio Account SID, required by the SMS, Call, and WhatsApp integrations.
 Default: `None`
 
 Twilio Auth token, required by the SMS, Call, and WhatsApp integrations.
+
+## `TWILIO_AUTH_FILE` {: #TWILIO_AUTH_FILE }
+
+Default: None
+
+If set, must contain a filesystem path pointing to a readable file. Healthchecks will
+read the contents of the file into the [TWILIO_AUTH](#TWILIO_AUTH) setting.
+If `TWILIO_AUTH` and `TWILIO_AUTH_FILE` are both set, `TWILIO_AUTH_FILE` takes
+precedence.
 
 ## `TWILIO_FROM` {: #TWILIO_FROM }
 
@@ -866,16 +1120,15 @@ TWILIO_FROM=+15017122661
 
 Default: `None`
 
-Optional, the Twilio Messaging Service SID for sending SMS and WhatsApp notifications.
+The Twilio Messaging Service SID for sending SMS and WhatsApp notifications.
 
-If `TWILIO_MESSAGING_SERVICE_SID` is specified, Healthchecks will include it in the
-"MessagingServiceSid" field when sending SMS and WhatsApp messages via Twilio API.
-This will result in Twilio using a Messaging Service instead of a plain sender number
-to deliver the SMS and WhatsApp messages.
+`TWILIO_MESSAGING_SERVICE_SID` is **required** for sending WhatsApp notifications.
 
-If `TWILIO_MESSAGING_SERVICE_SID` is not set, Healthchecks will fall back to using
-the "From" field with the value configured in [TWILIO_FROM](#TWILIO_FROM) in API
-requests.
+`TWILIO_MESSAGING_SERVICE_SID` is **optional** for sending SMS notifications. If specified,
+Healthchecks will pass it in the "MessagingServiceSid" field to Twilio API. This will
+result in Twilio using a Messaging Service instead of a plain sender number to deliver
+the SMS messages. If not specified, Healthchecks will fall back to using
+the "From" field with the value configured in [TWILIO_FROM](#TWILIO_FROM).
 
 Example:
 
@@ -887,7 +1140,15 @@ TWILIO_MESSAGING_SERVICE_SID=MGe56e622d540e6badc52ae0ac4af028c6
 
 Default: `False`
 
-A boolean that turns on/off the WhatsApp integration.
+A boolean that turns on/off the WhatsApp integration. For the WhatsApp integration
+to work, you will also need to specify:
+
+* [TWILIO_ACCOUNT](#TWILIO_ACCOUNT)
+* [TWILIO_AUTH](#TWILIO_AUTH)
+* [TWILIO_FROM](#TWILIO_FROM)
+* [TWILIO_MESSAGING_SERVICE_SID](#TWILIO_MESSAGING_SERVICE_SID)
+* [WHATSAPP_DOWN_CONTENT_SID](#WHATSAPP_DOWN_CONTENT_SID)
+* [WHATSAPP_UP_CONTENT_SID](#WHATSAPP_UP_CONTENT_SID).
 
 ## `USE_PAYMENTS` {: #USE_PAYMENTS }
 
@@ -907,6 +1168,40 @@ Enabled by default.
 Default: `True`
 
 A boolean that turns on/off the Webhooks integration. Enabled by default.
+
+## `WHATSAPP_DOWN_CONTENT_SID` {: #WHATSAPP_DOWN_CONTENT_SID }
+
+Default: `None`
+
+Identifier of the Twilio content template to use for WhatsApp "down" notifications.
+Required by the WhatsApp integration.
+
+Meta requires WhatsApp message templates to be pre-registered and approved.
+Create a content template in your Twilio account with the following contents:
+
+````
+The check “{{1}}” is DOWN.
+````
+
+You can tweak the message contents as needed, but make sure it has a single placeholder
+similar to the above example.
+
+## `WHATSAPP_UP_CONTENT_SID` {: #WHATSAPP_UP_CONTENT_SID }
+
+Default: `None`
+
+Identifier of the Twilio content template to use for WhatsApp "up" notifications.
+Required by the WhatsApp integration.
+
+Meta requires WhatsApp message templates to be pre-registered and approved.
+Create a content template in your Twilio account with the following contents:
+
+````
+The check “{{1}}” is now UP.
+````
+
+You can tweak the message contents as needed, but make sure it has a single placeholder
+similar to the above example.
 
 ## `ZULIP_ENABLED` {: #ZULIP_ENABLED }
 

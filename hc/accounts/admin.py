@@ -16,7 +16,6 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.html import format_html
 from django_stubs_ext import WithAnnotations
-
 from hc.accounts.models import Credential, Profile, Project
 
 Lookups = Iterable[tuple[str, str]]
@@ -57,7 +56,9 @@ class NumChecksFilter(admin.SimpleListFilter):
             ("1000", "More than 1000"),
         )
 
-    def queryset(self, r: HttpRequest, qs: QuerySet[Profile]) -> QuerySet[Profile]:
+    def queryset(
+        self, r: HttpRequest, qs: QuerySet[WithAnnotations[Profile, ProfileAnnotations]]
+    ) -> QuerySet[WithAnnotations[Profile, ProfileAnnotations]]:
         value = self.value()
         if value:
             qs = qs.filter(num_checks__gt=int(value))
@@ -146,7 +147,7 @@ class ProfileAdmin(ModelAdmin[Profile]):
     )
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[Profile]:
-        qs = super(ProfileAdmin, self).get_queryset(request)
+        qs = super().get_queryset(request)
         qs = qs.prefetch_related("user__project_set")
         qs = qs.annotate(num_members=Count("user__project__member", distinct=True))
         qs = qs.annotate(num_checks=Count("user__project__check", distinct=True))
@@ -187,7 +188,7 @@ class ProfileAdmin(ModelAdmin[Profile]):
     def checks(self, obj: WithAnnotations[Profile, ProfileAnnotations]) -> str:
         tmpl = "{} of {}"
         if obj.num_checks > 1:
-            tmpl = "<b>%s</b>" % tmpl
+            tmpl = "<b>{} of {}</b>"
         return format_html(tmpl, obj.num_checks, obj.check_limit)
 
     def invited(self, obj: WithAnnotations[Profile, ProfileAnnotations]) -> str:
@@ -243,16 +244,14 @@ class ProjectAdmin(ModelAdmin[Project]):
     readonly_fields = ("code", "owner")
     list_select_related = ("owner",)
     list_display = ("id", "name_", "users", "usage", "switch")
-    search_fields = ["id", "name", "owner__email"]
+    search_fields = ["id", "name", "owner__email", "code"]
 
     class Media:
         css = {"all": ("css/admin/projects.css",)}
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[Project]:
-        qs = super(ProjectAdmin, self).get_queryset(request)
+        qs = super().get_queryset(request)
         qs = qs.annotate(num_channels=Count("channel", distinct=True))
-        # The Project model has a "num_checks" method, so use
-        # a different name for the annotation to avoid type confusion:
         qs = qs.annotate(num_checks=Count("check", distinct=True))
         qs = qs.annotate(num_members=Count("member", distinct=True))
         return qs
@@ -269,9 +268,6 @@ class ProjectAdmin(ModelAdmin[Project]):
         else:
             return render_to_string("admin/project_list_team.html", {"project": obj})
 
-    def email(self, obj: Project) -> str:
-        return obj.owner.email
-
     def usage(self, obj: WithAnnotations[Project, ProjectAnnotations]) -> str:
         return _format_usage(obj.num_checks, obj.num_channels)
 
@@ -286,7 +282,7 @@ class UserAnnotations(TypedDict):
     last_active_date: datetime | None
 
 
-class HcUserAdmin(UserAdmin):
+class HcUserAdmin(UserAdmin[User]):
     list_display = (
         "id",
         "email",
@@ -314,9 +310,6 @@ class HcUserAdmin(UserAdmin):
     def last_active(
         self, user: WithAnnotations[User, UserAnnotations]
     ) -> datetime | None:
-        assert (
-            isinstance(user.last_active_date, datetime) or user.last_active_date is None
-        )
         return user.last_active_date
 
     def usage(self, user: WithAnnotations[User, UserAnnotations]) -> str:

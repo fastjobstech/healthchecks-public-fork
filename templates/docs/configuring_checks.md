@@ -30,9 +30,9 @@ case of failures, and where to look for additional information.
 
 ## Simple Schedules
 
-SITE_NAME supports two types of schedules: **Simple** and **Cron**. Use Simple
-schedules for monitoring processes that you expect to run at relatively regular
-intervals: once an hour, once a day, once a week, etc.
+SITE_NAME supports three types of schedules: **Simple**, **Cron**, and **OnCalendar**.
+Use Simple schedules for monitoring processes that you expect to run at relatively
+regular intervals: once an hour, once a day, once a week, etc.
 
 ![Editing the period and grace time](IMG_URL/edit_simple_schedule.png)
 
@@ -45,15 +45,19 @@ execution times.
 
 Note: if you use the "start" signal to [measure job run times](../measuring_script_run_time/),
 then Grace Time also specifies the maximum allowed time gap between "start" and
-"success" signals. Whenever SITE_NAME receives a "start" signal, it expects a subsequent 
-"success" signal within Grace Time. If the success signal does not arrive within the 
+"success" signals. Whenever SITE_NAME receives a "start" signal, it expects a subsequent
+"success" signal within Grace Time. If the success signal does not arrive within the
 configured Grace Time, SITE_NAME will mark the check as failed and send out alerts.
 
 ## Cron Schedules
 
-Use "cron" for monitoring processes with more complex schedules. This monitoring mode
-ensures that jobs run **at the correct time** and not just at the correct time
-intervals.
+Use "Cron" for monitoring cron jobs and other processes with more complex schedules.
+This monitoring mode ensures that jobs run **at the correct time** and not just at
+the correct time intervals.
+
+See [Cron syntax cheatsheet](../cron/) for cron expression syntax examples.
+See [crontab(5) man page](https://www.man7.org/linux/man-pages/man5/crontab.5.html)
+for complete cron syntax reference.
 
 ![Editing cron schedule](IMG_URL/edit_cron_schedule.png)
 
@@ -66,28 +70,85 @@ timezone here.
 * **Grace Time**, same as for simple schedules, is how long to wait before sending an
 alert for a late check.
 
-## Filtering Rules
+## OnCalendar Schedules
+
+Use "OnCalendar" schedules to monitor systemd timers that use `OnCalendar=` schedules.
+Same as with systemd timers, you can specify more than one `OnCalendar` expression
+(separated with newlines, one schedule per line), and SITE_NAME will expect a ping
+whenever any schedule matches.
+
+See [systemd.time(7) man page](https://www.man7.org/linux/man-pages/man7/systemd.time.7.html#CALENDAR_EVENTS)
+for complete OnCalendar syntax reference.
+
+![Editing cron schedule](IMG_URL/edit_oncalendar_schedule.png)
+
+## Filtering Rules {: #filtering-rules }
 
 In the "Filtering Rules" dialog, you can control several advanced aspects of
 how SITE_NAME handles incoming pings for a particular check.
 
 ![Setting filtering rules](IMG_URL/filtering_rules.png)
 
-* **Allowed request methods for HTTP requests**. You can require the ping
+* **Allowed HTTP Request Methods**. You can require the ping
 requests to use HTTP POST. Use the "Only POST" option if you run into issues of
 preview bots hitting the ping URLs when you send them in email or post them in chat.
-* **Filter by keywords in the Subject line**. When pinging [via email](../email/),
-look for specific keywords in the subject line. If the subject line contains any of
-the keywords listed in **Start Keywords**, **Success Keywords**, or
-**Failure Keywords**, SITE_NAME will assume it to be a start, a success, or a failure
-signal, respectively. Useful if, for example, your backup  software sends an email 
-after each backup run with a different subject line depending on success or failure.
-* **Filter by keywords in the message body**. Same as the previous option, but
-looks for the keywords in the email message body. SITE_NAME checks for keywords both in
-the plain text and the HTML parts of email messages.
+* **Content Filtering**. You can instruct SITE_NAME to look for specific keywords
+in the subject line or the message body of email pings, and in the HTTP request body
+of HTTP pings.
 * **Pinging a Paused Check**. Normally, when you ping a paused check, it leaves the
 paused state and goes into the "up" state (or the "down" state
 in case of [a failure signal](../signaling_failures/)).
 You can change this behavior by selecting the "Ignore the ping, stay in
 the paused state" option. With this option selected, the paused state becomes "sticky":
 SITE_NAME will ignore all incoming pings until you explicitly *resume* the check.
+
+### Content Filtering
+
+If the **Request body of HTTP requests** option is checked, SITE_NAME will classify
+the HTTP pings as start, success, or failure signals by looking for keywords in
+the first PING_BODY_LIMIT_FORMATTED of the request body.
+
+If either the **Subject line of email messages** or the **Message body of email
+messages** option is checked, SITE_NAME will classify email pings as start, success, or
+failure signals by looking for keywords in the subject line and/or message body.
+SITE_NAME supports HTML emails: when looking for keywords in message body, it checks
+both plain text and HTML versions of the email.
+
+You can specify multiple keywords in each of the **Start Keywords**,
+**Success Keywords**, and **Failure Keywords** fields by separating them with commas.
+The keyword matching is case-sensitive (for example, "error" and "ERROR" are different
+keywords).
+
+SITE_NAME looks for keywords in a specific order:
+
+* It first looks for **failure keywords**. If any are found, it classifies the ping
+  as a failure signal and does not look further.
+* It then looks for **success keywords**. If any are found, it classifies the ping
+  as a success signal and does not look further.
+* It then looks for **start keywords**. If any are found, it classifies the ping
+  as a start signal.
+* Finally, if no matching keywords are found, SITE_NAME either ignores the ping or
+  classifies it as a failure signal, depending on the **If no keywords match**
+  configuration option. Ignored pings are shown in the event log with an "Ignored" label,
+  but they do not affect check's status as they are neither "success" nor "failure"
+  nor "start" signals.
+
+Example use case: consider a backup cron job that sends an HTTP POST request every
+time it completes. If the job completes successfully, the HTTP request will contain
+text "Backup successful". If the job fails, the request body will contain an
+error message. The error messages can vary, and the complete list of all possible error
+messages is not known. To handle this scenario, you can use content filtering as
+follows:
+
+* Enable the **Request body of HTTP requests** – enables content filtering for
+  HTTP pings.
+* In the **Success keywords** field enter "Backup successful" – if this string is found
+  in the request body of a HTTP ping, SITE_NAME will classify the ping as a success
+  signal.
+* Select the **If no keywords match: Classify the ping as failure** option – SITE_NAME
+  will classify all other HTTP requests as failure signals.
+
+With these settings, SITE_NAME will classify a HTTP ping as a success signal
+if and only if the request body contains text "Backup successful". If the request
+body does not contain this string (or the request body is absent altogether),
+it will classify the ping as a failure signal.

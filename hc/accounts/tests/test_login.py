@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from urllib.parse import quote_plus
+
 from django.conf import settings
 from django.core import mail
-from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.test.utils import override_settings
 
 from hc.accounts.models import Credential
@@ -15,15 +16,16 @@ class LoginTestCase(BaseTestCase):
         super().setUp()
         self.checks_url = f"/projects/{self.project.code}/checks/"
 
-    def get_html(self, email: EmailMessage) -> str:
-        assert isinstance(email, EmailMultiAlternatives)
-        html, _ = email.alternatives[0]
-        assert isinstance(html, str)
-        return html
-
     def test_it_shows_form(self) -> None:
         r = self.client.get("/accounts/login/")
-        self.assertContains(r, "Email Me a Link")
+        self.assertContains(r, "magic-link-form")
+        # It should not show validation errors yet
+        self.assertNotContains(r, "This field is required")
+
+    @override_settings(EMAIL_HOST=None)
+    def test_it_handles_no_smtp(self) -> None:
+        r = self.client.get("/accounts/login/")
+        self.assertNotContains(r, "magic-link-form")
 
     def test_it_redirects_authenticated_get(self) -> None:
         self.client.login(username="alice@example.org", password="password")
@@ -47,11 +49,9 @@ class LoginTestCase(BaseTestCase):
 
         # And email should have been sent
         self.assertEqual(len(mail.outbox), 1)
-        message = mail.outbox[0]
-        self.assertEqual(message.subject, f"Log in to {settings.SITE_NAME}")
-        html = self.get_html(message)
-        self.assertIn("http://testserver/static/img/logo.png", html)
-        self.assertIn("http://testserver/docs/", html)
+        self.assertEqual(mail.outbox[0].subject, f"Log in to {settings.SITE_NAME}")
+        self.assertEmailContainsHtml("http://testserver/static/img/logo.png")
+        self.assertEmailContains("http://testserver/docs/")
 
     @override_settings(SESSION_COOKIE_SECURE=True)
     def test_it_sets_secure_autologin_cookie(self) -> None:
@@ -62,8 +62,7 @@ class LoginTestCase(BaseTestCase):
     @override_settings(SITE_LOGO_URL="https://example.org/logo.svg")
     def test_it_uses_custom_logo(self) -> None:
         self.client.post("/accounts/login/", {"identity": "alice@example.org"})
-        html = self.get_html(mail.outbox[0])
-        self.assertIn("https://example.org/logo.svg", html)
+        self.assertEmailContainsHtml("https://example.org/logo.svg")
 
     def test_it_sends_link_with_next(self) -> None:
         form = {"identity": "alice@example.org"}
@@ -74,7 +73,8 @@ class LoginTestCase(BaseTestCase):
         # The check_token link should have a ?next= query parameter:
         self.assertEqual(len(mail.outbox), 1)
         body = mail.outbox[0].body
-        self.assertTrue("/?next=" + self.channels_url in body)
+        quoted_channels_url = quote_plus(self.channels_url)
+        self.assertTrue(f"/?next={quoted_channels_url}" in body)
 
     def test_it_handles_unknown_email(self) -> None:
         form = {"identity": "surprise@example.org"}
@@ -162,13 +162,10 @@ class LoginTestCase(BaseTestCase):
 
     def test_it_handles_password_login_with_redirect(self) -> None:
         check = Check.objects.create(project=self.project)
-
         form = {"action": "login", "email": "alice@example.org", "password": "password"}
-
-        samples = [self.channels_url, "/checks/%s/details/" % check.code]
-
+        samples = [self.channels_url, f"/checks/{check.code}/details/"]
         for s in samples:
-            r = self.client.post("/accounts/login/?next=%s" % s, form)
+            r = self.client.post(f"/accounts/login/?next={s}", form)
             self.assertRedirects(r, s)
 
     def test_it_handles_bad_next_parameter(self) -> None:
@@ -214,15 +211,24 @@ class LoginTestCase(BaseTestCase):
         user_id, email, valid_until = self.client.session["2fa_user"]
         self.assertEqual(user_id, self.alice.id)
 
+    def test_redirect_to_webauthn_form_preserves_next(self) -> None:
+        Credential.objects.create(user=self.alice, name="Alices Key")
+
+        form = {"action": "login", "email": "alice@example.org", "password": "password"}
+        r = self.client.post(f"/accounts/login/?next={self.channels_url}", form)
+        self.assertRedirects(
+            r,
+            f"/accounts/login/two_factor/?next={self.channels_url}",
+            fetch_redirect_response=False,
+        )
+
     def test_it_redirects_to_totp_form(self) -> None:
         self.profile.totp = "0" * 32
         self.profile.save()
 
         form = {"action": "login", "email": "alice@example.org", "password": "password"}
         r = self.client.post("/accounts/login/", form)
-        self.assertRedirects(
-            r, "/accounts/login/two_factor/totp/", fetch_redirect_response=False
-        )
+        self.assertRedirects(r, "/accounts/login/two_factor/totp/")
 
         # It should not log the user in yet
         self.assertNotIn("_auth_user_id", self.client.session)
@@ -230,6 +236,16 @@ class LoginTestCase(BaseTestCase):
         # Instead, it should set 2fa_user_id in the session
         user_id, email, valid_until = self.client.session["2fa_user"]
         self.assertEqual(user_id, self.alice.id)
+
+    def test_redirect_to_totp_form_preserves_next(self) -> None:
+        self.profile.totp = "0" * 32
+        self.profile.save()
+
+        form = {"action": "login", "email": "alice@example.org", "password": "password"}
+        r = self.client.post(f"/accounts/login/?next={self.channels_url}", form)
+        self.assertRedirects(
+            r, f"/accounts/login/two_factor/totp/?next={self.channels_url}"
+        )
 
     def test_it_handles_missing_profile(self) -> None:
         self.profile.delete()

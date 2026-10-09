@@ -3,9 +3,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core import mail
-from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.test.utils import override_settings
-
 from hc.accounts.models import Member, Project
 from hc.api.models import TokenBucket
 from hc.test import BaseTestCase
@@ -15,13 +13,7 @@ class ProjectTestCase(BaseTestCase):
     def setUp(self) -> None:
         super().setUp()
 
-        self.url = "/projects/%s/settings/" % self.project.code
-
-    def get_html(self, email: EmailMessage) -> str:
-        assert isinstance(email, EmailMultiAlternatives)
-        html, _ = email.alternatives[0]
-        assert isinstance(html, str)
-        return html
+        self.url = f"/projects/{self.project.code}/settings/"
 
     def test_it_checks_access(self) -> None:
         self.client.login(username="charlie@example.org", password="password")
@@ -33,7 +25,7 @@ class ProjectTestCase(BaseTestCase):
         r = self.client.get(self.url)
         self.assertContains(r, "Change Project Name")
 
-    def test_it_masks_keys_by_default(self) -> None:
+    def test_it_shows_plaintext_keys(self) -> None:
         self.project.api_key_readonly = "R" * 32
         self.project.ping_key = "P" * 22
         self.project.save()
@@ -43,25 +35,32 @@ class ProjectTestCase(BaseTestCase):
         r = self.client.get(self.url)
         self.assertEqual(r.status_code, 200)
 
+        self.assertContains(r, "X" * 32)
+        self.assertContains(r, "R" * 32)
+        self.assertContains(r, "P" * 22)
+
+    def test_it_requires_rw_access_to_show_keys(self) -> None:
+        self.bobs_membership.role = "r"
+        self.bobs_membership.save()
+
+        self.client.login(username="bob@example.org", password="password")
+        r = self.client.get(self.url)
+
         self.assertNotContains(r, "X" * 32)
         self.assertNotContains(r, "R" * 32)
         self.assertNotContains(r, "P" * 22)
 
-    def test_it_shows_keys(self) -> None:
-        self.project.api_key_readonly = "R" * 32
-        self.project.ping_key = "P" * 22
-        self.project.save()
-
+    def test_it_creates_api_key(self) -> None:
         self.client.login(username="alice@example.org", password="password")
 
-        form = {"show_keys": "1"}
+        form = {"create_key": "api_key"}
         r = self.client.post(self.url, form)
         self.assertEqual(r.status_code, 200)
 
-        self.assertContains(r, "X" * 32)
-        self.assertContains(r, "R" * 32)
-        self.assertContains(r, "P" * 22)
-        self.assertContains(r, "Prometheus metrics endpoint")
+        self.project.refresh_from_db()
+        self.assertEqual(len(self.project.api_key), 73)
+        self.assertContains(r, "key-created-modal")
+        self.assertContains(r, "hcw_" + self.project.api_key[:8])
 
     def test_it_creates_readonly_key(self) -> None:
         self.client.login(username="alice@example.org", password="password")
@@ -71,8 +70,25 @@ class ProjectTestCase(BaseTestCase):
         self.assertEqual(r.status_code, 200)
 
         self.project.refresh_from_db()
-        self.assertEqual(len(self.project.api_key_readonly), 32)
-        self.assertFalse("b'" in self.project.api_key_readonly)
+        self.assertEqual(len(self.project.api_key_readonly), 73)
+        self.assertContains(r, "key-created-modal")
+        self.assertContains(r, "hcr_" + self.project.api_key_readonly[:8])
+
+    def test_it_creates_ping_key(self) -> None:
+        self.project.ping_key = ""
+        self.project.save()
+
+        self.client.login(username="alice@example.org", password="password")
+
+        form = {"create_key": "ping_key"}
+        r = self.client.post(self.url, form)
+        self.assertEqual(r.status_code, 200)
+
+        self.project.refresh_from_db()
+        self.assertEqual(len(self.project.ping_key), 22)
+        self.assertEqual(self.project.ping_key, self.project.ping_key.lower())
+        self.assertContains(r, "key-created-modal")
+        self.assertContains(r, "click on it to reveal it")
 
     def test_it_requires_rw_access_to_create_key(self) -> None:
         self.bobs_membership.role = "r"
@@ -127,9 +143,18 @@ class ProjectTestCase(BaseTestCase):
         subj = f"You have been invited to join Alice's Project on {settings.SITE_NAME}"
         self.assertEqual(message.subject, subj)
 
-        html = self.get_html(message)
-        self.assertIn("You will be able to manage", message.body)
-        self.assertIn("You will be able to manage", html)
+        self.assertEmailContains("You will be able to manage")
+
+    @override_settings(EMAIL_HOST=None)
+    def test_it_skips_invite_email_if_email_host_not_set(self) -> None:
+        self.client.login(username="alice@example.org", password="password")
+
+        form = {"invite_team_member": "1", "email": "frank@example.org", "role": "w"}
+        r = self.client.post(self.url, form)
+        self.assertEqual(r.status_code, 200)
+
+        self.assertEqual(self.project.member_set.count(), 2)
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_it_adds_readonly_team_member(self) -> None:
         self.client.login(username="alice@example.org", password="password")
@@ -144,11 +169,7 @@ class ProjectTestCase(BaseTestCase):
 
         self.assertEqual(member.role, member.Role.READONLY)
 
-        # And an email should have been sent
-        message = mail.outbox[0]
-        html = self.get_html(message)
-        self.assertIn("You will be able to view", message.body)
-        self.assertIn("You will be able to view", html)
+        self.assertEmailContains("You will be able to view")
 
     def test_it_adds_manager_team_member(self) -> None:
         self.client.login(username="alice@example.org", password="password")
@@ -183,7 +204,7 @@ class ProjectTestCase(BaseTestCase):
         self.assertEqual(q.count(), 1)
 
         # And this should not have affected the rate limit:
-        tq = TokenBucket.objects.filter(value="invite-%d" % self.alice.id)
+        tq = TokenBucket.objects.filter(value=f"invite-{self.alice.id}")
         self.assertFalse(tq.exists())
 
     def test_it_rejects_duplicate_membership(self) -> None:
@@ -223,7 +244,7 @@ class ProjectTestCase(BaseTestCase):
 
     @override_settings(SECRET_KEY="test-secret")
     def test_it_rate_limits_invites(self) -> None:
-        obj = TokenBucket(value="invite-%d" % self.alice.id)
+        obj = TokenBucket(value=f"invite-{self.alice.id}")
         obj.tokens = 0
         obj.save()
 
@@ -327,7 +348,7 @@ class ProjectTestCase(BaseTestCase):
     def test_it_checks_membership_when_removing_team_member(self) -> None:
         self.client.login(username="charlie@example.org", password="password")
 
-        url = "/projects/%s/settings/" % self.charlies_project.code
+        url = f"/projects/{self.charlies_project.code}/settings/"
         form = {"remove_team_member": "1", "email": "alice@example.org"}
         r = self.client.post(url, form)
         self.assertEqual(r.status_code, 400)
@@ -356,7 +377,7 @@ class ProjectTestCase(BaseTestCase):
 
         self.client.login(username="alice@example.org", password="password")
 
-        r = self.client.get("/projects/%s/settings/" % p2.code)
+        r = self.client.get(f"/projects/{p2.code}/settings/")
         self.assertContains(r, "Add Users from Other Projects")
         self.assertContains(r, "bob@example.org")
 
@@ -390,11 +411,3 @@ class ProjectTestCase(BaseTestCase):
         self.assertEqual(r.status_code, 200)
 
         self.assertNotContains(r, "Prometheus metrics endpoint")
-
-    def test_it_requires_rw_access_to_show_api_key(self) -> None:
-        self.bobs_membership.role = "r"
-        self.bobs_membership.save()
-
-        self.client.login(username="bob@example.org", password="password")
-        r = self.client.post(self.url, {"show_keys": "1"})
-        self.assertEqual(r.status_code, 403)

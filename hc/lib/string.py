@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 uuid_match_regex = re.compile(
-    "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
 )
 
 
@@ -49,3 +49,12 @@ def replace(template: str, ctx: dict[str, str]) -> str:
 
 def is_valid_uuid_string(value: str) -> bool:
     return bool(uuid_match_regex.match(value))
+
+
+def match_keywords(haystack: str, keywords: str) -> bool:
+    for s in keywords.split(","):
+        s = s.strip()
+        if s and s in haystack:
+            return True
+
+    return False
