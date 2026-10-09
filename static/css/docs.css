@@ -51,7 +51,7 @@ h2.rule {
 }
 
 .docs-content h2 {
-    margin-top: 30px;
+    padding-top: 30px;
     font-weight: bold;
 }
 
@@ -69,14 +69,16 @@ h2.rule {
     margin-left: 0;
 }
 
-.docs-content img {
+.docs-content img,
+.docs-content video {
     max-width: 66%;
     border: 6px solid var(--border-color);
 }
 
 
 @media (max-width: 992px) {
-    .docs-content img {
+    .docs-content img,
+    .docs-content video {
         max-width: 100%;
     }
 }
@@ -114,7 +116,7 @@ h2.rule {
 
 .page-docs dl {
     display: grid;
-    grid-template-columns: 150px auto;
+    grid-template-columns: 180px auto;
 }
 
 .page-docs .docs-http_api dl {
@@ -174,4 +176,10 @@ h2.rule {
 .self-hosted-configuration-toc li {
     margin: 0;
     padding: 0;
+}
+
+.page-docs .self-hosted-configuration-toc ~ h2:target code {
+    display: inline-block;
+    color: #333;
+    background: #ffef82;
 }

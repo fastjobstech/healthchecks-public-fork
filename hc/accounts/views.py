@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import logging
 import time
 from datetime import timedelta as td
-from secrets import token_urlsafe
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
@@ -32,15 +32,16 @@ from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
-
 from hc.accounts import forms
 from hc.accounts.decorators import require_sudo_mode
+from hc.accounts.http import AuthenticatedHttpRequest
 from hc.accounts.models import Credential, Member, Profile, Project
 from hc.api.models import Channel, Check, TokenBucket
-from hc.lib.typealias import AuthenticatedHttpRequest
 from hc.lib.tz import all_timezones
 from hc.lib.webauthn import CreateHelper, GetHelper
 from hc.payments.models import Subscription
+
+logger = logging.getLogger(__name__)
 
 POST_LOGIN_ROUTES = (
     "hc-checks",
@@ -132,26 +133,16 @@ def _check_2fa(request: HttpRequest, user: User) -> HttpResponse:
         # - timestamp, to limit the max time between the auth steps
         request.session["2fa_user"] = [user.id, user.email, int(time.time())]
 
-        if have_keys:
-            path = reverse("hc-login-webauthn")
-        else:
-            path = reverse("hc-login-totp")
+        query = {}
+        if _allow_redirect(request.GET.get("next")):
+            query["next"] = request.GET["next"]
 
-        redirect_url = request.GET.get("next")
-        if _allow_redirect(redirect_url):
-            path += "?next=%s" % redirect_url
-
+        route = "hc-login-webauthn" if have_keys else "hc-login-totp"
+        path = reverse(route, query=query)
         return redirect(path)
 
     auth_login(request, user)
     return _redirect_after_login(request)
-
-
-def _new_key(nbytes: int = 24) -> str:
-    while True:
-        candidate = token_urlsafe(nbytes)
-        if candidate[0] not in "-_" and candidate[-1] not in "-_":
-            return candidate
 
 
 def _set_autologin_cookie(response: HttpResponse) -> None:
@@ -170,8 +161,7 @@ def _set_autologin_cookie(response: HttpResponse) -> None:
 @sensitive_post_parameters()
 def login(request: HttpRequest) -> HttpResponse:
     form = forms.PasswordLoginForm()
-    magic_form = forms.EmailLoginForm(request)
-
+    magic_form = forms.EmailLoginForm()
     if request.method == "POST":
         if request.POST.get("action") == "login":
             form = forms.PasswordLoginForm(request.POST)
@@ -206,6 +196,7 @@ def login(request: HttpRequest) -> HttpResponse:
         "registration_open": settings.REGISTRATION_OPEN,
         "support_email": settings.SUPPORT_EMAIL,
         "account_closed": "account-closed" in request.GET,
+        "use_magic_form": bool(settings.EMAIL_HOST),
     }
     return render(request, "accounts/login.html", ctx)
 
@@ -228,15 +219,24 @@ def signup(request: HttpRequest) -> HttpResponse:
     if not settings.REGISTRATION_OPEN or request.user.is_authenticated:
         return HttpResponseForbidden()
 
-    ctx = {}
+    ctx: dict[str, object] = {}
     form = forms.SignupForm(request)
     if form.is_valid():
         email = form.cleaned_data["identity"]
-        if not User.objects.filter(email=email).exists():
+        try:
+            user = User.objects.get(email=email)
+            # Sometimes existing users forget they already have an account.
+            # They use the signup form and are confused why no email arrives.
+            # To avoid this confusion, if we see the user account already exists,
+            # we will send them sign-in link even though they used the wrong form
+            # ("sign up" instead of "sign in").
+        except User.DoesNotExist:
+            # If the user does not exist, create a new user account.
             tz = form.cleaned_data["tz"]
             user = _make_user(email, tz)
-            profile = Profile.objects.for_user(user)
-            profile.send_instant_login_link()
+
+        profile = Profile.objects.for_user(user)
+        profile.send_instant_login_link()
     else:
         ctx = {"form": form}
 
@@ -268,7 +268,6 @@ def check_token(
 
     user = authenticate(username=username, token=token)
     if user is not None and user.is_active:
-        assert isinstance(user, User)
         if new_email:
             if User.objects.filter(email=new_email).exists():
                 request.session["bad_link"] = True
@@ -374,16 +373,15 @@ def project(request: AuthenticatedHttpRequest, code: UUID) -> HttpResponse:
                 return HttpResponseForbidden()
 
             if request.POST["create_key"] == "api_key":
-                project.api_key = _new_key(24)
+                ctx["new_key"] = project.set_api_key()
             elif request.POST["create_key"] == "api_key_readonly":
-                project.api_key_readonly = _new_key(24)
+                ctx["new_key"] = project.set_api_key_readonly()
             elif request.POST["create_key"] == "ping_key":
-                project.ping_key = _new_key(16)
+                ctx["new_ping_key"] = project.set_ping_key()
             project.save()
 
             ctx["key_created"] = True
             ctx["api_status"] = "success"
-            ctx["show_keys"] = True
         elif "revoke_key" in request.POST:
             if not rw:
                 return HttpResponseForbidden()
@@ -398,11 +396,6 @@ def project(request: AuthenticatedHttpRequest, code: UUID) -> HttpResponse:
 
             ctx["key_revoked"] = True
             ctx["api_status"] = "info"
-        elif "show_keys" in request.POST:
-            if not rw:
-                return HttpResponseForbidden()
-
-            ctx["show_keys"] = True
         elif "invite_team_member" in request.POST:
             if not is_manager:
                 return HttpResponseForbidden()
@@ -695,7 +688,7 @@ def close(request: AuthenticatedHttpRequest) -> HttpResponse:
             user.delete()
 
             request.session.flush()
-            path = reverse("hc-login") + "?account-closed"
+            path = reverse("hc-login", query={"account-closed": 1})
             return redirect(path)
 
     ctx = {}
@@ -709,6 +702,8 @@ def close(request: AuthenticatedHttpRequest) -> HttpResponse:
 @login_required
 def remove_project(request: AuthenticatedHttpRequest, code: str) -> HttpResponse:
     project = get_object_or_404(Project, code=code, owner=request.user)
+    for check in project.check_set.all():
+        check.lock_and_delete()
     project.delete()
     return redirect("hc-index")
 
@@ -719,7 +714,9 @@ def add_webauthn(request: AuthenticatedHttpRequest) -> HttpResponse:
     if not settings.RP_ID:
         return HttpResponse(status=404)
 
-    credentials = request.user.credentials.values_list("data", flat=True)
+    q = request.user.credentials.values_list("data", flat=True)
+    # CreateHelper wants list[bytes] so normalize to that
+    credentials = [bytes(item) for item in q]
     helper = CreateHelper(settings.RP_ID, credentials)
 
     if request.method == "POST":
@@ -728,8 +725,10 @@ def add_webauthn(request: AuthenticatedHttpRequest) -> HttpResponse:
             return HttpResponseBadRequest()
 
         state = request.session["state"]
-        credential_bytes = helper.verify(state, form.cleaned_data["response"])
-        if credential_bytes is None:
+        try:
+            credential_bytes = helper.verify(state, form.cleaned_data["response"])
+        except ValueError:
+            logger.exception("CreateHelper.verify failed, form: %s", form.cleaned_data)
             return HttpResponseBadRequest()
 
         c = Credential(user=request.user)
@@ -840,7 +839,9 @@ def login_webauthn(request: HttpRequest) -> HttpResponse:
     except User.DoesNotExist:
         return HttpResponseBadRequest()
 
-    credentials = user.credentials.values_list("data", flat=True)
+    q = user.credentials.values_list("data", flat=True)
+    # GetHelper wants list[bytes] so normalize to that
+    credentials = [bytes(item) for item in q]
     helper = GetHelper(settings.RP_ID, credentials)
 
     if request.method == "POST":
@@ -860,10 +861,10 @@ def login_webauthn(request: HttpRequest) -> HttpResponse:
 
     totp_url = None
     if user.profile.totp:
-        totp_url = reverse("hc-login-totp")
-        redirect_url = request.GET.get("next")
-        if _allow_redirect(redirect_url):
-            totp_url += "?next=%s" % redirect_url
+        query = {}
+        if _allow_redirect(request.GET.get("next")):
+            query["next"] = request.GET["next"]
+        totp_url = reverse("hc-login-totp", query=query)
 
     ctx = {
         "options": options,
@@ -927,7 +928,7 @@ def appearance(request: AuthenticatedHttpRequest) -> HttpResponse:
 
     if request.method == "POST":
         theme = request.POST.get("theme", "")
-        if theme in ("", "dark"):
+        if theme in ("", "dark", "system"):
             profile.theme = theme
             profile.save()
             ctx["status"] = "info"

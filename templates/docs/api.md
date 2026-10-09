@@ -15,8 +15,8 @@ in your account.
 <div id="api-toc"></div>
 
 Endpoint Name                                         | Endpoint Address
-------------------------------------------------------|-------
-**Checks**|
+------------------------------------------------------|-----------------
+**Checks**                                            |
 [List existing checks](#list-checks)                  | `GET SITE_ROOT/api/v3/checks/`
 [Get a single check](#get-check)                      | `GET SITE_ROOT/api/v3/checks/<uuid>`<br>`GET SITE_ROOT/api/v3/checks/<unique_key>`
 [Create a new check](#create-check)                   | `POST SITE_ROOT/api/v3/checks/`
@@ -24,15 +24,17 @@ Endpoint Name                                         | Endpoint Address
 [Pause monitoring of a check](#pause-check)           | `POST SITE_ROOT/api/v3/checks/<uuid>/pause`
 [Resume monitoring of a check](#resume-check)         | `POST SITE_ROOT/api/v3/checks/<uuid>/resume`
 [Delete check](#delete-check)                         | `DELETE SITE_ROOT/api/v3/checks/<uuid>`
-**Pings**|
+**Pings**                                             |
 [List check's logged pings](#list-pings)              | `GET SITE_ROOT/api/v3/checks/<uuid>/pings/`
 [Get a ping's logged body](#ping-body)                | `GET SITE_ROOT/api/v3/checks/<uuid>/pings/<n>/body`
-**Flips**|
-[List check's status changes](#list-flips)   | `GET SITE_ROOT/api/v3/checks/<uuid>/flips/`<br>`GET SITE_ROOT/api/v3/checks/<unique_key>/flips/`
-**Integrations**|
-[List existing integrations](#list-channels) | `GET SITE_ROOT/api/v3/channels/`
-**Badges**|
-[List project's badges](#list-badges)                  | `GET SITE_ROOT/api/v3/badges/`
+**Flips**                                             |
+[List check's status changes](#list-flips)            | `GET SITE_ROOT/api/v3/checks/<uuid>/flips/`<br>`GET SITE_ROOT/api/v3/checks/<unique_key>/flips/`
+**Integrations**                                      |
+[List existing integrations](#list-channels)          | `GET SITE_ROOT/api/v3/channels/`
+**Badges**                                            |
+[List project's badges](#list-badges)                 | `GET SITE_ROOT/api/v3/badges/`
+**Service status**                                    |
+[Check database connectivity](#status)                | `GET SITE_ROOT/api/v3/status/`
 
 ## Changes From v2
 
@@ -145,6 +147,10 @@ curl --header "X-Api-Key: your-api-key" SITE_ROOT/api/v3/checks/
       "failure_kw": "ERROR",
       "filter_subject": true,
       "filter_body": false,
+      "filter_http_body": false,
+      "filter_default_fail": false,
+      "badge_url": "SITE_ROOT/b/2/1b9d0386-d07e-44b0-8995-4a9a372de43c.svg",
+      "uuid": "31365bce-8da9-4729-8ff3-aaa71d56b712",
       "ping_url": "PING_ENDPOINT31365bce-8da9-4729-8ff3-aaa71d56b712",
       "update_url": "SITE_ROOT/api/v3/checks/31365bce-8da9-4729-8ff3-aaa71d56b712",
       "pause_url": "SITE_ROOT/api/v3/checks/31365bce-8da9-4729-8ff3-aaa71d56b712/pause",
@@ -170,6 +176,10 @@ curl --header "X-Api-Key: your-api-key" SITE_ROOT/api/v3/checks/
       "failure_kw": "",
       "filter_subject": false,
       "filter_body": false,
+      "filter_http_body": false,
+      "filter_default_fail": false,
+      "badge_url": "SITE_ROOT/b/2/7d3ab93d-836e-4505-bbda-fcbd5e07adf9.svg",
+      "uuid": "803f680d-e89b-492b-82ef-2be7b774a92d",
       "ping_url": "PING_ENDPOINT803f680d-e89b-492b-82ef-2be7b774a92d",
       "update_url": "SITE_ROOT/api/v3/checks/803f680d-e89b-492b-82ef-2be7b774a92d",
       "pause_url": "SITE_ROOT/api/v3/checks/803f680d-e89b-492b-82ef-2be7b774a92d/pause",
@@ -186,8 +196,8 @@ The possible values for the `status` field are: `new`, `up`, `grace`, `down`,
 and `paused`.
 
 When using the read-only API key, SITE_NAME omits the following fields from responses:
-`ping_url`, `update_url`, `pause_url`, `resume_url`, `channels`.  It adds an extra
-`unique_key` field. The `unique_key` identifier is stable across API calls, and
+`uuid`, `ping_url`, `update_url`, `pause_url`, `resume_url`, `channels`.  It adds an
+extra `unique_key` field. The `unique_key` identifier is stable across API calls, and
 you can use it in the [Get a single check](#get-check)
 and [List check's status changes](#list-flips) API calls.
 
@@ -214,6 +224,9 @@ Example:
       "failure_kw": "ERROR",
       "filter_subject": true,
       "filter_body": false,
+      "filter_http_body": false,
+      "filter_default_fail": false,
+      "badge_url": "SITE_ROOT/b/2/1b9d0386-d07e-44b0-8995-4a9a372de43c.svg",
       "unique_key": "a6c7b0a8a66bed0df66abfdab3c77736861703ee",
       "timeout": 3600
     },
@@ -235,6 +248,9 @@ Example:
       "failure_kw": "",
       "filter_subject": false,
       "filter_body": false,
+      "filter_http_body": false,
+      "filter_default_fail": false,
+      "badge_url": "SITE_ROOT/b/2/7d3ab93d-836e-4505-bbda-fcbd5e07adf9.svg",
       "unique_key": "124f983e0e3dcaeba921cfcef46efd084576e783",
       "schedule": "15 5 * * *",
       "tz": "UTC"
@@ -293,6 +309,10 @@ curl --header "X-Api-Key: your-api-key" SITE_ROOT/api/v3/checks/<uuid>
   "failure_kw": "ERROR",
   "filter_subject": true,
   "filter_body": false,
+  "filter_http_body": false,
+  "filter_default_fail": false,
+  "badge_url": "SITE_ROOT/b/2/7d3ab93d-836e-4505-bbda-fcbd5e07adf9.svg",
+  "uuid": "803f680d-e89b-492b-82ef-2be7b774a92d",
   "ping_url": "PING_ENDPOINT803f680d-e89b-492b-82ef-2be7b774a92d",
   "update_url": "SITE_ROOT/api/v3/checks/803f680d-e89b-492b-82ef-2be7b774a92d",
   "pause_url": "SITE_ROOT/api/v3/checks/803f680d-e89b-492b-82ef-2be7b774a92d/pause",
@@ -309,8 +329,8 @@ and `paused`.
 ### Example Read-Only Response
 
 When using the read-only API key, SITE_NAME omits the following fields from responses:
-`ping_url`, `update_url`, `pause_url`, `resume_url`, `channels`.  It adds an extra
-`unique_key` field. This identifier is stable across API calls.
+`uuid`, `ping_url`, `update_url`, `pause_url`, `resume_url`, `channels`.  It adds an
+extra `unique_key` field. This identifier is stable across API calls.
 
 Note: although API omits the `*_url` fields in read-only API responses, the client can
 easily construct these URLs themselves *if* they know the check's unique UUID.
@@ -334,6 +354,9 @@ easily construct these URLs themselves *if* they know the check's unique UUID.
   "failure_kw": "ERROR",
   "filter_subject": true,
   "filter_body": false,
+  "filter_http_body": false,
+  "filter_default_fail": false,
+  "badge_url": "SITE_ROOT/b/2/7d3ab93d-836e-4505-bbda-fcbd5e07adf9.svg",
   "unique_key": "124f983e0e3dcaeba921cfcef46efd084576e783",
   "schedule": "15 5 * * *",
   "tz": "UTC"
@@ -404,17 +427,23 @@ grace
     Minimum: 60 (one minute), maximum: 31536000 (365 days).
 
 schedule
-:   string, optional, default value: "`* * * * *`".
+:   string, optional.
 
-    A cron expression defining this check's schedule.
+    A cron or systemd OnCalendar expression defining this check's schedule.
+    SITE_NAME will detect the expression type (cron or OnCalendar) automatically.
 
-    If you specify both `timeout` and `schedule` parameters,
-    SITE_NAME will create a Cron check and ignore
-    the `timeout` value.
+    The `schedule` parameter takes precedence over the `timeout` field: if you specify
+    both the `timeout` and the `schedule` parameters, SITE_NAME will save the
+    `schedule` and ignore the `timeout`.
 
-    Example for a check running every half-hour:
+    Example using a cron expression ("run every half-hour"):
 
     <pre>{"schedule": "0,30 * * * *"}</pre>
+
+    Example using an OnCalendar expression ("run at 12:00 of the last day of every
+    month"):
+
+    <pre>{"schedule": "\*-\*~1 12:00"}</pre>
 
 tz
 :   string, optional, default value: "UTC".
@@ -450,7 +479,7 @@ methods
     <pre>{"methods": "POST"}</pre>
 
 channels
-:   string, optional
+:   string, optional.
 
     By default, this API call assigns no integrations to the newly created
     check.
@@ -503,108 +532,103 @@ unique
 start_kw
 :   string, optional, default value: "".
 
-    Specifies the keywords for classifying inbound email messages as "Start" signals.
-    Separate multiple keywords using commas.
+    Specifies the keywords for classifying inbound email messages and HTTP pings as
+    start signals. Separate multiple keywords using commas. Keywords are
+    case-sensitive.
 
-    Use this field in combination with the `filter_subject` and `filter_body` fields.
-    Setting `filter_subject` to `true` enables filtering on the email subject line,
-    `filter_body` enables filtering on the entire email body. SITE_NAME supports both
-    plain text and HTML email messages.
+    Use this field in combination with the `filter_subject`, `filter_body`,
+    and `filter_http_body` fields.
 
     Example:
 
     <pre>{"filter_subject": true, "start_kw": "STARTED"}</pre>
 
-    In this example, SITE_NAME classifies the email as a start signal if the Subject
-    line contains the word "STARTED".
+    In this example, SITE_NAME classifies an inbound email as a start signal if the
+    Subject line contains the word "STARTED".
 
 success_kw
 :   string, optional, default value: "".
 
-    Specifies the keywords for classifying inbound email messages as "Success" signals.
-    Separate multiple keywords using commas.
+    Specifies the keywords for classifying inbound email messages and HTTP pings as
+    success signals. Separate multiple keywords using commas. Keywords are
+    case-sensitive.
 
-    Use this field in combination with the `filter_subject` and `filter_body` fields.
-    Setting `filter_subject` to `true` enables filtering on the email subject line,
-    `filter_body` enables filtering on the entire email body. SITE_NAME supports both
-    plain text and HTML email messages.
+    Use this field in combination with the `filter_subject`, `filter_body`,
+    and `filter_http_body` fields.
 
     Example:
 
     <pre>{"filter_subject": true, "success_kw": "SUCCESS,COMPLETED"}</pre>
 
-    In this example, the email counts as success if the Subject line contains either
-    the word "SUCCESS" or the word "COMPLETED".
+    In this example, an inbound email message counts as success if the Subject line
+    contains either the word "SUCCESS" or the word "COMPLETED".
 
 failure_kw
 :   string, optional, default value: "".
 
-    Specifies the keywords for classifying inbound email messages as "Failure" signals.
-    Separate multiple keywords using commas.
+    Specifies the keywords for classifying inbound email messages and HTTP pings as
+    failure signals. Separate multiple keywords using commas. Keywords are
+    case-sensitive.
 
-    Use this field in combination with the `filter_subject` and `filter_body` fields.
-    Setting `filter_subject` to `true` enables filtering on the email subject line,
-    `filter_body` enables filtering on the entire email body. SITE_NAME supports both
-    plain text and HTML email messages.
+    Use this field in combination with the `filter_subject`, `filter_body`,
+    and `filter_http_body` fields.
 
     Example:
 
-    <pre>{"filter_subject": true, "failure_kw": "FAILED, ERROR"}</pre>
+    <pre>{"filter_subject": true, "failure_kw": "FAILED,ERROR"}</pre>
 
-    In this example, the email counts as failure if the Subject line contains either
-    the word "FAILED" or the word "ERROR".
+    In this example, an inbound email message counts as failure if the Subject line
+    contains either the word "FAILED" or the word "ERROR".
 
 filter_subject
 :   boolean, optional, default value: false.
 
     Enables filtering of inbound email messages by looking for keywords in their
-    subject lines. See also the `success_kw` and `failure_kw` fields.
+    subject lines. See also the `start_kw`, `success_kw`, and `failure_kw` fields.
 
 filter_body
 :   boolean, optional, default value: false.
 
-    Enables filtering of inbound email messages by looking for keywords in their
-    message body. See also the `success_kw` and `failure_kw` fields.
+    Enables filtering of inbound email messages by looking for keywords in the
+    message body. See also the `start_kw`, `success_kw`, and `failure_kw` fields.
 
-subject
-:   string, optional, default value: "".
+    SITE_NAME supports both plain text and HTML email messages, and looks for
+    keywords both in the plain text and the HTML message contents.
 
-    **Deprecated**. Use the `success_kw`, `filter_subject` and `filter_body` fields
-    instead.
+filter_http_body
+:   boolean, optional, default value: false.
 
-    Specifies the keywords for classifying inbound email messages as "Success" signals.
-    Separate multiple keywords using commas. If any of the keywords is found in
-    an email message's Subject line, the email message will count as "Success".
+    Enables filtering of HTTP pings by looking for keywords in the first
+    PING_BODY_LIMIT_FORMATTED of the HTTP request body. See also the
+    `start_kw`, `success_kw`, and `failure_kw` fields.
 
-    Set this field to "" (an empty string) to consider all inbound email messages as
-    "Success" (unless they match any keywords listed in `subject_fail` and are thus
-    classified as "Failure").
+filter_default_fail
+:   boolean, optional, default value: false.
 
-    Example:
+    Determines the handling of email and HTTP pings when keyword filtering is enabled,
+    but no keywords match.
 
-    <pre>SUCCESS,COMPLETED</pre>
+    Keyword filtering is enabled for inbound email messages if either `filter_subject`
+    or `filter_body` (or both) is set to `true`. Keyword filtering is enabled for HTTP
+    pings if `filter_http_body` is set to `true`.
 
-    In this example, the email counts as success if the Subject line contains either
-    the word "SUCCESS" or the word "COMPLETED".
+    If `filter_default_fail=false`, and no keywords match, the ping will be ignored.
 
-subject_fail
-:   string, optional, default value: "".
-
-    **Deprecated**. Use the `failure_kw`, `filter_subject` and `filter_body` fields
-    instead.
-
-    Specifies the keywords for classifying inbound email messages as "Failure" signals.
-    Separate multiple keywords using commas. If any of the keywords is found in
-    an email message's Subject line, the email message will count as "Failure".
-
-    Set this field to "" (an empty string) to perform no "Failure" classification.
+    If `filter_default_fail=true`, and no keywords match, the ping will be
+    classified as a failure signal.
 
     Example:
 
-    <pre>FAILED,ERROR</pre>
+    <pre>{
+        "filter_http_body": true,
+        "filter_default_fail": true,
+        "success_kw": "Backup successful"
+    }</pre>
 
-    In this example, the email counts as failure if the Subject line contains either
-    the word "FAILED" or the word "ERROR".
+    In this example, an HTTP ping will be classified as a success signal if and only if
+    the request body contains the string "Backup successful". In all other cases,
+    including HTTP GET requests with an empty request body, the ping will be classified
+    as a failure signal.
 
 ### Response Codes
 
@@ -644,29 +668,35 @@ curl SITE_ROOT/api/v3/checks/ \
 
 ```json
 {
-  "channels": "",
-  "desc": "",
-  "grace": 60,
-  "last_ping": null,
-  "n_pings": 0,
   "name": "Backups",
   "slug": "",
+  "tags": "prod www",
+  "desc": "",
+  "grace": 60,
+  "n_pings": 0,
+  "status": "new",
+  "started": false,
+  "last_ping": null,
   "next_ping": null,
   "manual_resume": false,
   "methods": "",
+  "subject": "",
+  "subject_fail": "",
   "start_kw": "",
   "success_kw": "",
   "failure_kw": "",
   "filter_subject": false,
   "filter_body": false,
-  "pause_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc/pause",
-  "resume_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc/resume",
-  "ping_url": "PING_ENDPOINTf618072a-7bde-4eee-af63-71a77c5723bc",
-  "status": "new",
-  "started": false,
-  "tags": "prod www",
-  "timeout": 3600,
-  "update_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc",
+  "filter_http_body": false,
+  "filter_default_fail": false,
+  "badge_url": "SITE_ROOT/b/2/d43c84db-1502-4d86-a89d-181a33e25896.svg",
+  "uuid": "7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "ping_url": "PING_ENDPOINT7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "update_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "pause_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79/pause",
+  "resume_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79/resume",
+  "channels": "",
+  "timeout": 3600
 }
 ```
 
@@ -731,17 +761,23 @@ grace
 schedule
 :   string, optional.
 
-    A cron expression defining this check's schedule.
+    A cron or systemd OnCalendar expression defining this check's schedule.
+    SITE_NAME will detect the expression type (cron or OnCalendar) automatically.
 
-    If you specify both `timeout` and `schedule` parameters,
-    SITE_NAME will save the `schedule` parameter and ignore
-    the `timeout`.
+    The `schedule` parameter takes precedence over the `timeout` field: If you specify
+    both the `timeout` and the `schedule` parameters, SITE_NAME will save the
+    `schedule` and ignore the `timeout`.
 
-    Example for a check running every half-hour:
+    Example using a cron expression ("run every half-hour"):
 
     <pre>{"schedule": "0,30 * * * *"}</pre>
 
-tz
+    Example using an OnCalendar expression ("run at 12:00 of the last day of every
+    month"):
+
+    <pre>{"schedule": "\*-\*~1 12:00"}</pre>
+
+ tz
 :   string, optional.
 
     Server's timezone. This setting only has an effect in combination with the
@@ -808,108 +844,103 @@ channels
 start_kw
 :   string, optional, default value: "".
 
-    Specifies the keywords for classifying inbound email messages as "Start" signals.
-    Separate multiple keywords using commas.
+    Specifies the keywords for classifying inbound email messages and HTTP pings as
+    start signals. Separate multiple keywords using commas. Keywords are
+    case-sensitive.
 
-    Use this field in combination with the `filter_subject` and `filter_body` fields.
-    Setting `filter_subject` to `true` enables filtering on the email subject line,
-    `filter_body` enables filtering on the entire email body. SITE_NAME supports both
-    plain text and HTML email messages.
+    Use this field in combination with the `filter_subject`, `filter_body`,
+    and `filter_http_body` fields.
 
     Example:
 
     <pre>{"filter_subject": true, "start_kw": "STARTED"}</pre>
 
-    In this example, SITE_NAME classifies the email as a start signal if the Subject
-    line contains the word "STARTED".
+    In this example, SITE_NAME classifies an inbound email as a start signal if the
+    Subject line contains the word "STARTED".
 
 success_kw
 :   string, optional, default value: "".
 
-    Specifies the keywords for classifying inbound email messages as "Success" signals.
-    Separate multiple keywords using commas.
+    Specifies the keywords for classifying inbound email messages and HTTP pings as
+    success signals. Separate multiple keywords using commas. Keywords are
+    case-sensitive.
 
-    Use this field in combination with the `filter_subject` and `filter_body` fields.
-    Setting `filter_subject` to `true` enables filtering on the email subject line,
-    `filter_body` enables filtering on the entire email body. SITE_NAME supports both
-    plain text and HTML email messages.
+    Use this field in combination with the `filter_subject`, `filter_body`,
+    and `filter_http_body` fields.
 
     Example:
 
     <pre>{"filter_subject": true, "success_kw": "SUCCESS,COMPLETED"}</pre>
 
-    In this example, the email counts as success if the Subject line contains either
-    the word "SUCCESS" or the word "COMPLETED".
+    In this example, an inbound email message counts as success if the Subject line
+    contains either the word "SUCCESS" or the word "COMPLETED".
 
 failure_kw
 :   string, optional, default value: "".
 
-    Specifies the keywords for classifying inbound email messages as "Failure" signals.
-    Separate multiple keywords using commas.
+    Specifies the keywords for classifying inbound email messages and HTTP pings as
+    failure signals. Separate multiple keywords using commas. Keywords are
+    case-sensitive.
 
-    Use this field in combination with the `filter_subject` and `filter_body` fields.
-    Setting `filter_subject` to `true` enables filtering on the email subject line,
-    `filter_body` enables filtering on the entire email body. SITE_NAME supports both
-    plain text and HTML email messages.
+    Use this field in combination with the `filter_subject`, `filter_body`,
+    and `filter_http_body` fields.
 
     Example:
 
-    <pre>{"filter_subject": true, "failure_kw": "FAILED, ERROR"}</pre>
+    <pre>{"filter_subject": true, "failure_kw": "FAILED,ERROR"}</pre>
 
-    In this example, the email counts as failure if the Subject line contains either
-    the word "FAILED" or the word "ERROR".
+    In this example, an inbound email message counts as failure if the Subject line
+    contains either the word "FAILED" or the word "ERROR".
 
 filter_subject
 :   boolean, optional, default value: false.
 
     Enables filtering of inbound email messages by looking for keywords in their
-    subject lines. See also the `success_kw` and `failure_kw` fields.
+    subject lines. See also the `start_kw`, `success_kw`, and `failure_kw` fields.
 
 filter_body
 :   boolean, optional, default value: false.
 
-    Enables filtering of inbound email messages by looking for keywords in their
-    message body. See also the `success_kw` and `failure_kw` fields.
+    Enables filtering of inbound email messages by looking for keywords in the
+    message body. See also the `start_kw`, `success_kw`, and `failure_kw` fields.
 
-subject
-:   string, optional, default value: "".
+    SITE_NAME supports both plain text and HTML email messages, and looks for
+    keywords both in the plain text and the HTML message contents.
 
-    **Deprecated**. Use the `success_kw`, `filter_subject` and `filter_body` fields
-    instead.
+filter_http_body
+:   boolean, optional, default value: false.
 
-    Specifies the keywords for classifying inbound email messages as "Success" signals.
-    Separate multiple keywords using commas. If any of the keywords is found in
-    an email message's Subject line, the email message will count as "Success".
+    Enables filtering of HTTP pings by looking for keywords in the first
+    PING_BODY_LIMIT_FORMATTED of the HTTP request body. See also the
+    `start_kw`, `success_kw`, and `failure_kw` fields.
 
-    Set this field to "" (an empty string) to consider all inbound email messages as
-    "Success" (unless they match any keywords listed in `subject_fail` and are thus
-    classified as "Failure").
+filter_default_fail
+:   boolean, optional, default value: false.
 
-    Example:
+    Determines the handling of email and HTTP pings when keyword filtering is enabled,
+    but no keywords match.
 
-    <pre>SUCCESS,COMPLETED</pre>
+    Keyword filtering is enabled for inbound email messages if either `filter_subject`
+    or `filter_body` (or both) is set to `true`. Keyword filtering is enabled for HTTP
+    pings if `filter_http_body` is set to `true`.
 
-    In this example, the email counts as success if the Subject line contains either
-    the word "SUCCESS" or the word "COMPLETED".
+    If `filter_default_fail=false`, and no keywords match, the ping will be ignored.
 
-subject_fail
-:   string, optional, default value: "".
-
-    **Deprecated**. Use the `failure_kw`, `filter_subject` and `filter_body` fields
-    instead.
-
-    Specifies the keywords for classifying inbound email messages as "Failure" signals.
-    Separate multiple keywords using commas. If any of the keywords is found in
-    an email message's Subject line, the email message will count as "Failure".
-
-    Set this field to "" (an empty string) to perform no "Failure" classification.
+    If `filter_default_fail=true`, and no keywords match, the ping will be
+    classified as a failure signal.
 
     Example:
 
-    <pre>FAILED,ERROR</pre>
+    <pre>{
+        "filter_http_body": true,
+        "filter_default_fail": true,
+        "success_kw": "Backup successful"
+    }</pre>
 
-    In this example, the email counts as failure if the Subject line contains either
-    the word "FAILED" or the word "ERROR".
+    In this example, an HTTP ping will be classified as a success signal if and only if
+    the request body contains the string "Backup successful". In all other cases,
+    including HTTP GET requests with an empty request body, the ping will be classified
+    as a failure signal.
 
 ### Response Codes
 
@@ -933,7 +964,7 @@ subject_fail
 ### Example Request
 
 ```bash
-curl SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc \
+curl SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79 \
     --header "X-Api-Key: your-api-key" \
     --data '{"name": "Backups", "tags": "prod www", "timeout": 3600, "grace": 60}'
 ```
@@ -941,7 +972,7 @@ curl SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc \
 Or, alternatively:
 
 ```bash
-curl SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc \
+curl SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79 \
     --data '{"api_key": "your-api-key", "name": "Backups", "tags": "prod www", "timeout": 3600, "grace": 60}'
 ```
 
@@ -949,29 +980,35 @@ curl SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc \
 
 ```json
 {
-  "channels": "",
-  "desc": "",
-  "grace": 60,
-  "last_ping": null,
-  "n_pings": 0,
   "name": "Backups",
   "slug": "",
+  "tags": "prod www",
+  "desc": "",
+  "grace": 60,
+  "n_pings": 0,
+  "status": "new",
+  "started": false,
+  "last_ping": null,
   "next_ping": null,
   "manual_resume": false,
   "methods": "",
+  "subject": "",
+  "subject_fail": "",
   "start_kw": "",
   "success_kw": "",
   "failure_kw": "",
   "filter_subject": false,
   "filter_body": false,
-  "pause_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc/pause",
-  "resume_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc/resume",
-  "ping_url": "PING_ENDPOINTf618072a-7bde-4eee-af63-71a77c5723bc",
-  "status": "new",
-  "started": false,
-  "tags": "prod www",
-  "timeout": 3600,
-  "update_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc",
+  "filter_http_body": false,
+  "filter_default_fail": false,
+  "badge_url": "SITE_ROOT/b/2/d43c84db-1502-4d86-a89d-181a33e25896.svg",
+  "uuid": "7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "ping_url": "PING_ENDPOINT7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "update_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "pause_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79/pause",
+  "resume_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79/resume",
+  "channels": "",
+  "timeout": 3600
 }
 ```
 
@@ -1002,7 +1039,7 @@ This API call has no request parameters.
 ### Example Request
 
 ```bash
-curl SITE_ROOT/api/v3/checks/0c8983c9-9d73-446f-adb5-0641fdacc9d4/pause \
+curl SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79/pause \
     --request POST --header "X-Api-Key: your-api-key" --data ""
 ```
 
@@ -1014,30 +1051,35 @@ header is sometimes required by some network proxies and web servers.
 
 ```json
 {
-  "channels": "",
+  "name": "Backups",
+  "slug": "",
+  "tags": "prod www",
   "desc": "",
   "grace": 60,
-  "last_ping": null,
-  "next_ping": null,
   "n_pings": 0,
-  "name": "Backups",
-  "slug": "backups",
+  "status": "paused",
+  "started": false,
+  "last_ping": null,
   "next_ping": null,
   "manual_resume": false,
   "methods": "",
+  "subject": "",
+  "subject_fail": "",
   "start_kw": "",
   "success_kw": "",
   "failure_kw": "",
   "filter_subject": false,
   "filter_body": false,
-  "pause_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc/pause",
-  "resume_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc/resume",
-  "ping_url": "PING_ENDPOINTf618072a-7bde-4eee-af63-71a77c5723bc",
-  "status": "paused",
-  "started": false,
-  "tags": "prod www",
-  "timeout": 3600,
-  "update_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc"
+  "filter_http_body": false,
+  "filter_default_fail": false,
+  "badge_url": "SITE_ROOT/b/2/d43c84db-1502-4d86-a89d-181a33e25896.svg",
+  "uuid": "7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "ping_url": "PING_ENDPOINT7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "update_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "pause_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79/pause",
+  "resume_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79/resume",
+  "channels": "",
+  "timeout": 3600
 }
 ```
 
@@ -1071,7 +1113,7 @@ This API call has no request parameters.
 ### Example Request
 
 ```bash
-curl SITE_ROOT/api/v3/checks/0c8983c9-9d73-446f-adb5-0641fdacc9d4/resume \
+curl SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79/resume \
     --request POST --header "X-Api-Key: your-api-key" --data ""
 ```
 
@@ -1083,30 +1125,35 @@ header is sometimes required by some network proxies and web servers.
 
 ```json
 {
-  "channels": "",
+  "name": "Backups",
+  "slug": "",
+  "tags": "prod www",
   "desc": "",
   "grace": 60,
-  "last_ping": null,
-  "next_ping": null,
   "n_pings": 0,
-  "name": "Backups",
-  "slug": "backups",
+  "status": "new",
+  "started": false,
+  "last_ping": null,
   "next_ping": null,
   "manual_resume": false,
   "methods": "",
+  "subject": "",
+  "subject_fail": "",
   "start_kw": "",
   "success_kw": "",
   "failure_kw": "",
   "filter_subject": false,
   "filter_body": false,
-  "pause_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc/pause",
-  "resume_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc/resume",
-  "ping_url": "PING_ENDPOINTf618072a-7bde-4eee-af63-71a77c5723bc",
-  "status": "new",
-  "started": false,
-  "tags": "prod www",
-  "timeout": 3600,
-  "update_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc"
+  "filter_http_body": false,
+  "filter_default_fail": false,
+  "badge_url": "SITE_ROOT/b/2/d43c84db-1502-4d86-a89d-181a33e25896.svg",
+  "uuid": "7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "ping_url": "PING_ENDPOINT7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "update_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "pause_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79/pause",
+  "resume_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79/resume",
+  "channels": "",
+  "timeout": 3600
 }
 ```
 
@@ -1137,7 +1184,7 @@ This API call has no request parameters.
 ### Example Request
 
 ```bash
-curl SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc \
+curl SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79 \
     --request DELETE --header "X-Api-Key: your-api-key"
 ```
 
@@ -1145,29 +1192,35 @@ curl SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc \
 
 ```json
 {
-  "channels": "",
+  "name": "Backups",
+  "slug": "",
+  "tags": "prod www",
   "desc": "",
   "grace": 60,
-  "last_ping": null,
   "n_pings": 0,
-  "name": "Backups",
-  "slug": "backups",
+  "status": "new",
+  "started": false,
+  "last_ping": null,
   "next_ping": null,
   "manual_resume": false,
   "methods": "",
+  "subject": "",
+  "subject_fail": "",
   "start_kw": "",
   "success_kw": "",
   "failure_kw": "",
   "filter_subject": false,
   "filter_body": false,
-  "pause_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc/pause",
-  "resume_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc/resume",
-  "ping_url": "PING_ENDPOINTf618072a-7bde-4eee-af63-71a77c5723bc",
-  "status": "new",
-  "started": false,
-  "tags": "prod www",
-  "timeout": 3600,
-  "update_url": "SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc",
+  "filter_http_body": false,
+  "filter_default_fail": false,
+  "badge_url": "SITE_ROOT/b/2/d43c84db-1502-4d86-a89d-181a33e25896.svg",
+  "uuid": "7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "ping_url": "PING_ENDPOINT7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "update_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79",
+  "pause_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79/pause",
+  "resume_url": "SITE_ROOT/api/v3/checks/7918b17b-a745-4db1-8575-9d2e07c97f79/resume",
+  "channels": "",
+  "timeout": 3600
 }
 ```
 
@@ -1276,6 +1329,10 @@ response header and the ping body is returned verbatim in the response body.
 404 Not Found
 :   The check does not exist, the ping does not exist, or the ping has no body data.
 
+503 Service Unavailable
+:   External object storage service is unavailable, please try later.
+
+
 ### Example Request
 
 ```bash
@@ -1290,6 +1347,16 @@ curl SITE_ROOT/api/v3/checks/f618072a-7bde-4eee-af63-71a77c5723bc/pings/397/body
 
 Returns a list of "flips" this check has experienced. A flip is a change of status
 (from "down" to "up," or from "up" to "down").
+
+This API endpoint supports time filtering via the `seconds`, `start`, and `end` query
+parameters. If no time filters are specified, the API returns all stored
+flips for a given check.
+
+Notes about flip retention: SITE_NAME stores historic flips for the current month
+and for two full months prior to the current month. The cleanup of older flips is
+[a manual administrative action](../self_hosted/#database-cleanup).
+Therefore, SITE_NAME may return even older flips if the server administrator does not
+perform regular database cleanups.
 
 ### Query Parameters
 
@@ -1473,3 +1540,18 @@ curl --header "X-Api-Key: your-api-key" SITE_ROOT/api/v3/badges/
 }
 ```
 
+## Check Database Connectivity {: #status .rule }
+
+`GET SITE_ROOT/api/v3/status/`
+
+Runs a test query and returns HTTP 200 if the query completes successfully.
+Use this endpoint to monitor the uptime of your Healthchecks instance with an
+external uptime monitoring system.
+
+### Response Codes
+
+200 OK
+:   The request succeeded.
+
+500 Internal Server Error
+:   Test database query did not succeed.

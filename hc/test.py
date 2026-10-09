@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 from django.contrib.auth.models import User
+from django.core import mail
+from django.core.mail import EmailMultiAlternatives
 from django.core.signing import TimestampSigner
 from django.test import Client, TestCase
 
@@ -17,6 +19,9 @@ else:
     from django.http import HttpResponse as TestHttpResponse
 
 __all__ = ["BaseTestCase", "TestHttpResponse"]
+
+P = ParamSpec("P")
+T = TypeVar("T")
 
 
 class BaseTestCase(TestCase):
@@ -68,9 +73,40 @@ class BaseTestCase(TestCase):
         self.charlies_profile = Profile(user=self.charlie)
         self.charlies_profile.save()
 
-        self.channels_url = "/projects/%s/integrations/" % self.project.code
+        self.channels_url = f"/projects/{self.project.code}/integrations/"
 
     def set_sudo_flag(self) -> None:
         session = self.client.session
         session["sudo"] = TimestampSigner().sign("active")
         session.save()
+
+    def assertEmailContainsText(self, fragment: str) -> None:
+        """Test if fragment appears in email body."""
+
+        self.assertIn(fragment, mail.outbox[0].body)
+
+    def assertEmailContainsHtml(self, fragment: str) -> None:
+        """Test if fragment appears in email's HTML content."""
+
+        email = mail.outbox[0]
+        assert isinstance(email, EmailMultiAlternatives)
+        html_content, _ = email.alternatives[0]
+        assert isinstance(html_content, str)
+        self.assertIn(fragment, html_content)
+
+    def assertEmailContains(self, fragment: str) -> None:
+        """Test if fragment appears in email's plain text *and* HTML content."""
+
+        self.assertEmailContainsText(fragment)
+        self.assertEmailContainsHtml(fragment)
+
+    def assertEmailNotContains(self, fragment: str) -> None:
+        """Test if fragment is absent from both plain text *and* HTML content."""
+
+        email = mail.outbox[0]
+        self.assertNotIn(fragment, email.body)
+
+        assert isinstance(email, EmailMultiAlternatives)
+        html_content, _ = email.alternatives[0]
+        assert isinstance(html_content, str)
+        self.assertNotIn(fragment, html_content)

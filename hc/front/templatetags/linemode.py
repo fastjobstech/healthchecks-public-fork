@@ -1,23 +1,24 @@
 from __future__ import annotations
 
 from django import template
-from django.template import Node, TemplateSyntaxError
+from django.template import Context, Node, NodeList, TemplateSyntaxError
+from django.template.base import Parser, Token
 
 register = template.Library()
 
 
 class LineModeNode(Node):
-    def __init__(self, nodelist):
+    def __init__(self, nodelist: NodeList) -> None:
         self.nodelist = nodelist
 
-    def render(self, context):
+    def render(self, context: Context) -> str:
         context["__lines__"] = []
         self.nodelist.render(context)
         return "\n".join(context["__lines__"])
 
 
 @register.tag
-def linemode(parser, token):
+def linemode(parser: Parser, token: Token) -> LineModeNode:
     """Skip content outside {% line %} blocks.
 
     Intended to be used for precise control of whitespace and newlines.
@@ -43,27 +44,10 @@ def linemode(parser, token):
     return LineModeNode(nodelist)
 
 
-class LineNode(Node):
-    def __init__(self, nodelist):
-        self.nodelist = nodelist
+@register.simple_block_tag(takes_context=True)
+def line(context: Context, content: str) -> str:
+    if "__lines__" not in context:
+        raise TemplateSyntaxError("The line tag used without outer linemode tags")
 
-    def render(self, context):
-        if "__lines__" not in context:
-            raise TemplateSyntaxError("The line tag used without outer linemode tags")
-
-        context["__lines__"].append(self.nodelist.render(context))
-        return ""
-
-
-@register.tag
-def line(parser, token):
-    """For use with {% linemode %}.
-
-    Renders the enclosed content and appends it to context["__lines__"]
-    instead of returning it.
-
-    """
-
-    nodelist = parser.parse(("endline",))
-    parser.delete_first_token()
-    return LineNode(nodelist)
+    context["__lines__"].append(content)
+    return ""

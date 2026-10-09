@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import timedelta as td
 from uuid import UUID
 
+from django.test.utils import override_settings
 from django.utils.timezone import now
-
 from hc.api.models import Channel, Check
 from hc.test import BaseTestCase, TestHttpResponse
 
@@ -39,14 +39,16 @@ class GetCheckTestCase(BaseTestCase):
         url = f"/api/v{v}/checks/{code}"
         return self.client.get(url, HTTP_X_API_KEY=api_key)
 
+    @override_settings(SITE_ROOT="http://testserver")
     def test_it_works(self) -> None:
         r = self.get(self.a1.code)
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r["Access-Control-Allow-Origin"], "*")
 
         doc = r.json()
-        self.assertEqual(len(doc), 25)
+        self.assertEqual(len(doc), 29)
 
+        self.assertEqual(doc["uuid"], str(self.a1.code))
         self.assertEqual(doc["slug"], "alice-1-custom-slug")
         self.assertEqual(doc["timeout"], 3600)
         self.assertEqual(doc["grace"], 900)
@@ -66,6 +68,14 @@ class GetCheckTestCase(BaseTestCase):
         self.assertEqual(doc["failure_kw"], "ERROR")
         self.assertTrue(doc["filter_subject"])
         self.assertFalse(doc["filter_body"])
+        self.assertFalse(doc["filter_http_body"])
+        self.assertFalse(doc["filter_default_fail"])
+        self.assertEqual(
+            doc["badge_url"], f"http://testserver/b/2/{self.a1.badge_key}.svg"
+        )
+        self.assertEqual(
+            doc["update_url"], f"http://testserver/api/v1/checks/{self.a1.code}"
+        )
 
     def test_it_handles_invalid_uuid(self) -> None:
         r = self.get("not-an-uuid")
@@ -82,7 +92,7 @@ class GetCheckTestCase(BaseTestCase):
         self.assertEqual(r["Access-Control-Allow-Origin"], "*")
 
         doc = r.json()
-        self.assertEqual(len(doc), 25)
+        self.assertEqual(len(doc), 29)
 
         self.assertEqual(doc["timeout"], 3600)
         self.assertEqual(doc["grace"], 900)
@@ -105,7 +115,8 @@ class GetCheckTestCase(BaseTestCase):
         self.assertEqual(r.status_code, 200)
 
         # When using readonly keys, the ping URLs should not be exposed:
-        for key in ("ping_url", "update_url", "pause_url", "resume_url"):
+        self.assertNotContains(r, str(self.a1.code))
+        for key in ("uuid", "ping_url", "update_url", "pause_url", "resume_url"):
             self.assertNotContains(r, key)
 
     def test_v1_reports_status_started(self) -> None:
